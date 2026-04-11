@@ -11,6 +11,24 @@
 #define MSG_T_RES 2
 #define MSG_T_DEAD 3
 
+/* Node identifiers */
+#define W0_ID 1
+
+/* "Upper" line (even) */
+#define W1_ID 4
+#define W4_ID 2
+
+#define S1_ID 10
+#define S4_ID 8
+#define S5_ID 6
+
+/* "Lower" line (odd) */
+#define W2_ID 5
+#define W3_ID 3
+
+#define S2_ID 9
+#define S3_ID 7
+
 /* Gimme var (or pointer) and offset and I give you uint8_t pointer */
 #define GET_PTR(MSG,OFFSET) ( ((uint8_t*)(MSG) + (OFFSET) ) )
 
