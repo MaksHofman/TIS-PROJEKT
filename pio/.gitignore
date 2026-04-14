@@ -1,3 +1,4 @@
 .pio
+.platformio
 compile_commands.json
 .cache
