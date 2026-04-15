@@ -7,10 +7,10 @@
 #define S3 5
 #define OUT_PIN 6
 
-#define RED 0
-#define GREEN 1
-#define BLUE 2
-#define CLEAR 3
+#define COLOR_RED 0
+#define COLOR_GREEN 1
+#define COLOR_BLUE 2
+#define COLOR_CLEAR 3
 #define TOTAL 4
 
 #define CAL_DELAY 5000
