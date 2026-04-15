@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include "const_defs.h"
 
 // ================== KONFIG ==================
 #define I2C_FREQ 100000
@@ -47,6 +48,9 @@ void requestData(uint8_t addr) {
 void setup() {
   Serial.begin(115200);
   while (!Serial);
+
+  // router
+  Serial1.begin(UART_BAUD);
 
   Wire.begin(); // MASTER
   Wire.setClock(I2C_FREQ);

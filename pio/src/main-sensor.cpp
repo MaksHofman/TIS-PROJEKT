@@ -1,85 +1,57 @@
-/*
-  Projekt TIS E1
-  Czujnik koloru TCS3200
-  Platforma: Arduino MKR WAN 1310
-*/
 #include <Arduino.h>
+#include <Wire.h>
 #include "color_helper.h"
 #include "const_defs.h"
 
-// Read values
-uint8_t vals[4] = { };
+// ================== KONFIG ==================
+#define DEVICE_ADDR 0x10   // ZMIENIASZ dla każdego czujnika
+// ===========================================
 
-// calibration values
-uint8_t maxVals[5] = { };
+uint8_t maxVals[5] = {0};
 
-inline void calibrate() {
-    Serial.println("cal red:");
-    delay(CAL_DELAY);
-    maxVals[RED] = readColor(RED);
+volatile bool requestFlag = false;
 
-    Serial.println("cal green:");
-    delay(CAL_DELAY);
-    maxVals[GREEN] = readColor(GREEN);
+// Funkcja wywoływana gdy master chce dane
+void onRequest() {
+  uint8_t data[4];
 
-    Serial.println("cal blue:");
-    delay(CAL_DELAY);
-    maxVals[BLUE] = readColor(BLUE);
+  data[0] = DEVICE_ADDR;
+  data[1] = readColor(COLOR_RED);   // TODO: take more then RED
+  data[2] = millis() & 0xFF;
+  data[3] = 0xAA;
 
-    Serial.println("cal white:");
-    delay(CAL_DELAY);
-    maxVals[CLEAR] = readColor(CLEAR);
+  Wire.write(data, 4);
 }
 
-inline void printColor() {
-    if (vals[RED] == maxVals[TOTAL])
-        Serial.println("RED");
-    else if (vals[GREEN] == maxVals[TOTAL])
-        Serial.println("GREEN");
-    else if (vals[BLUE] == maxVals[TOTAL])
-        Serial.println("BLUE");
-    else
-        Serial.println("WHITE");
+// Opcjonalnie: odbiór danych od mastera
+void onReceive(int len) {
+  while (Wire.available()) {
+    uint8_t cmd = Wire.read();
+    Serial.print("CMD: ");
+    Serial.println(cmd);
+  }
 }
 
-void setup()
-{
-    Serial.begin(115200);
+void setup() {
+  Serial.begin(115200);
 
-    pinMode(S0, OUTPUT);
-    pinMode(S1, OUTPUT);
-    pinMode(S2, OUTPUT);
-    pinMode(S3, OUTPUT);
-    pinMode(OUT_PIN, INPUT);    
+  // TODO: move to color sensor setup function
+  pinMode(S0, OUTPUT);
+  pinMode(S1, OUTPUT);
+  pinMode(S2, OUTPUT);
+  pinMode(S3, OUTPUT);
+  pinMode(OUT_PIN, INPUT);
+  digitalWrite(S0, HIGH);
+  digitalWrite(S1, LOW);  // skala 20%
 
-    // ustawienie skalowania częstotliwości: L L - Power down, L H - 2%, H L - 20%, H H - 100%
-    digitalWrite(S0, HIGH);
-    digitalWrite(S1, LOW);
+  Wire.begin(DEVICE_ADDR); // SLAVE
+  Wire.onRequest(onRequest);
+  Wire.onReceive(onReceive);
 
-    calibrate();
+  Serial.print("SLAVE START addr=0x");
+  Serial.println(DEVICE_ADDR, HEX);
 }
 
 void loop() {
-    vals[RED] = readColor(RED);
-    vals[GREEN] = readColor(GREEN);
-    vals[BLUE] = readColor(BLUE);
-    vals[CLEAR] = readColor(CLEAR);
-
-    maxVals[TOTAL] = max(max(max(vals[RED], vals[GREEN]), vals[BLUE]), vals[CLEAR]);
-
-    Serial.print("DBG: (");
-    Serial.print(vals[RED]/maxVals[TOTAL]);
-
-    Serial.print(", ");
-    Serial.print(vals[GREEN]/maxVals[TOTAL]);
-
-    Serial.print(", ");
-    Serial.print(vals[BLUE]/maxVals[TOTAL]);
-
-    Serial.print(", ");
-    Serial.print(vals[CLEAR]/maxVals[TOTAL]);
-    Serial.println(")");
-
-    printColor();
-    delay(1000);
+  delay(100);
 }
