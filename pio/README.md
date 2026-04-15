@@ -4,6 +4,7 @@ as there are 3 parts to this project, there are 3 environments which need to be 
 
 - `pc`
 - `router`
+- `aggregator`
 - `sensor`
 
 this can be done by passing `--environment` to `pio`/`platformio` commands like this:
