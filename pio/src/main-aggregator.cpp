@@ -1,7 +1,7 @@
 #include <Arduino.h>
-#include "api/Common.h"
 #include "uart_helper.h"
 #include "const_defs.h"
+char cmd;
 
 void setup() {
     Serial.begin(115200);
@@ -15,7 +15,13 @@ void setup() {
 
 void loop() {
     if (Serial.available()) {
-        char cmd = Serial.read();
+
+        Serial.readBytes(&cmd, 1);
         Serial1.write(cmd);
+    }
+
+    if (Serial1.available()) {
+        Serial1.readBytes(&cmd, 1);
+        Serial.println(cmd);
     }
 }

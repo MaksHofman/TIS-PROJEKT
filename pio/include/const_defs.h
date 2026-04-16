@@ -18,8 +18,8 @@
 
 // protocol pins
 // Serial3 (SERCOM3)
-#define SERIAL3_TX 0       // D0
-#define SERIAL3_RX 1       // D1
+#define SERIAL3_TX 0
+#define SERIAL3_RX 1
 #define SERIAL3_RX_PAD SERCOM_RX_PAD_1
 #define SERIAL3_TX_PAD UART_TX_PAD_0
 #define SERIAL3_FUNCTION PIO_SERCOM
@@ -31,6 +31,6 @@
 #define SERIAL4_TX_PAD UART_TX_PAD_0
 #define SERIAL4_FUNCTION PIO_SERCOM_ALT
 
-#define UART_BAUD   9600
+#define UART_BAUD   128
 
 #endif

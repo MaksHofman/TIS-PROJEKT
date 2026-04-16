@@ -3,13 +3,12 @@
 #include "const_defs.h"
 
 void setup() {
-    Serial.begin(115200);
-    while (!Serial);
 
-    // aggregator nodes
+    // slave
     Serial1.begin(UART_BAUD);
 
     setup_sercoms();
+    pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void loop() {
@@ -19,7 +18,7 @@ void loop() {
 
         switch (cmd) {
             case '1':
-                Serial.println("got 1");
+                Serial1.write('a');
                 break;
         }
     }
