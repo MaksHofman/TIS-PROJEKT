@@ -26,7 +26,7 @@
 byte Tx_buff[BUFF_LEN], Rx_buff[BUFF_LEN];
 byte ret_buf[RET_LEN];
 uint8_t awaiting_res = 0;
-unsigned long sent = millis();
+unsigned long sent = 0;
 
 /* Obsługa prawej strony (od W3 i W4) */
 void handleRHS(Uart &from, uint8_t from_id) {
