@@ -1,7 +1,5 @@
 #include <Arduino.h>
 #include <CRC.h>
-#include <cstdint>
-#include <cstring>
 #include "api/Common.h"
 #include "uart_helper.h"
 #include "const_defs.h"
