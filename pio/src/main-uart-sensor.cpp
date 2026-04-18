@@ -17,8 +17,8 @@ void loop() {
         char cmd; Serial1.readBytes(&cmd, 1);
 
         switch (cmd) {
-            case '1':
-                Serial1.write('a');
+            case '2':
+                Serial1.write('b');
                 break;
         }
     }

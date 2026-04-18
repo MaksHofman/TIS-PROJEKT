@@ -22,6 +22,6 @@ void loop() {
 
     if (Serial1.available()) {
         Serial1.readBytes(&cmd, 1);
-        Serial.println(cmd);
+        Serial.write(cmd);
     }
 }
