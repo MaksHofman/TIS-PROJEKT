@@ -11,12 +11,13 @@
 - Request - żądanie odczytu z czujnika
 - Response - odpowiedź z odczytem z czujnika
 - Dead - dalszy węzeł nie odpowiada. Przesyłana po upłynięci timeout'u. Jakiego? Zdefiniujcie makro, żeby można było metodą prób i błędów
+- Retransmit - żądanie retransmisji ostatniej wiadomości (CRC się nie zgadza)
 
 ## Wiadomość request (2B):
 - dst_id (4 bity): ustawione na id czujnika z którego chcemy odczytać wartość
 - typ (3 bity): ustawiony na MSG_T_REQ
 - PAYLOAD (0 bitów): brak (CRC ściśnięte)
-- bit padding'u 0
+- bit C: Komenda (1 - kalibracja, 0 - odczyt)
 - CRC-8
 
 ### Format:
@@ -24,7 +25,7 @@
     0                   1
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | dst_id| TYP |0|      CRC      |
+   | dst_id| TYP |C|      CRC      |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
@@ -40,7 +41,7 @@
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   | dst_id| TYP | src_id|      read     |    0    |      CRC      |
+   | dst_id| TYP | src_id|         read          |0|      CRC      |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
@@ -58,6 +59,21 @@
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    | dst_id| TYP | src_id|dead_id|0|      CRC      |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
+
+## Wiadomość retransmit (2B):
+- dst_id (4 bity): identyfikator tego od czego chcemy retransmisję ostatniej wysłanej wiadomości (CRC sprawdzane w każdym węźle, więc zawsze będzie to sąsiad)
+- typ (3 bity): MSG_T_RET
+- 1 bit padding'u zerami
+- CRC-8
+
+### Format:
+```
+    0                   1
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | dst_id| TYP |0|      CRC      |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 
 ## Przesyłanie bufora
