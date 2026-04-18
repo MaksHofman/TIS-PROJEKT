@@ -36,4 +36,12 @@
 // Buffer length
 #define BUFF_LEN 5
 
+#define MAIN_MENU_TEXT "Wybierz czynność:\r\n" \
+                         "1. Odpytaj S1\r\n" \
+                         "2. Odpytaj S2\r\n" \
+                         "3. Odpytaj S3\r\n" \
+                         "4. Odpytaj S4\r\n" \
+                         "5. Odpytaj S5\r\n" \
+                         "6. Kalibracja S1\r\n"
+
 #endif
