@@ -33,4 +33,7 @@
 
 #define UART_BAUD   9600
 
+// Buffer length
+#define BUFF_LEN 5
+
 #endif
