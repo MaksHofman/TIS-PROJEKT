@@ -122,4 +122,14 @@
     } \
 } while(0)
 
+/* Pack and unpack RGB to READ (R, G and B have to be 4 bits, otherwise I truncate it) */
+#define PACK_RGB(R,G,B) ((uint16_t) ((((R) & 0xf) << 8) | (((G) & 0xf) << 4) | ((B) &0xf)))
+
+/* Please let, R, G and B be some kind of uint (I can do pointer magic too, but this way it's easier) */
+#define UNPACK_RGB(READ,R,G,B) do { \
+    (R) = ((READ) >> 8) & 0xf; \
+    (G) = ((READ) >> 4) & 0xf; \
+    (B) = (READ) & 0xf; \
+} while(0)
+
 #endif

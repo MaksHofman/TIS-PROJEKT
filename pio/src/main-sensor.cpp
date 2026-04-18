@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include "color_helper.h"
 #include "const_defs.h"
-
+/* #TODO: Przerobić to na coś co korzysta z protokołu i UART'a (trzeba jeszcze przekonwertować odczyty z 8 na 4 bity) */
 // ================== KONFIG ==================
 #define DEVICE_ADDR 0x10   // ZMIENIASZ dla każdego czujnika
 // ===========================================
