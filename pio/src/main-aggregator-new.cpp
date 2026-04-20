@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <sys/_intsup.h>
 #include "api/Common.h"
+#include "led_helper.h"
 #include "uart_helper.h"
 #include "const_defs.h"
 #include "proto_defs.h"
@@ -31,6 +32,8 @@ void handleLHS(Uart &from, uint8_t from_id) {
     if (!(recv >= RET_LEN))
         return;
 
+    setLedState(RECEIVING);
+
     from.readBytes(Rx_buff, min(BUFF_LEN, recv));
 
     crc_valid = GET_CRC(Rx_buff) == calcCRC8(Rx_buff, recv - 1);
@@ -42,10 +45,14 @@ void handleLHS(Uart &from, uint8_t from_id) {
         return;
     }
 
-    // Spodziewamy się RET, RES, DEAD
+    // Spodziewamy się RET, DEAD, RES
     switch (GET_TYP(Rx_buff)) {
-        case MSG_T_RET: from.write(Tx_buff, REQ_LEN); break;
+        case MSG_T_RET:
+        setLedState(RETRANSMITTING);
+        from.write(Tx_buff, REQ_LEN);
+        break;
         case MSG_T_DEAD:
+        setLedState(GENERIC_ERROR);
         Serial.print(F("Wykryto awarię łącza pomiędzy "));
         switch (GET_SRC(Rx_buff)) {
             case W1_ID: Serial.print(F("W1 i ")); break;
@@ -67,7 +74,8 @@ void handleLHS(Uart &from, uint8_t from_id) {
 
         break;
         case MSG_T_RES:
-        if (from_id == SERIAL1_NEI) 
+        setLedState(RECEIVING);
+        if (from_id == SERIAL1_NEI)
             awaiting_res1 = 0;
         else if (from_id == SERIAL4_NEI)
             awaiting_res4 = 0;
@@ -94,7 +102,7 @@ void handleLHS(Uart &from, uint8_t from_id) {
                 Serial.println(F("niebieski."));
             else
                 Serial.println(F("N/A."));
-            
+
             break;
             default:
             Serial.print(F("Otrzymano ID "));
@@ -123,7 +131,6 @@ void setup() {
     Serial4.begin(UART_BAUD);
 
     setup_sercoms();
-    /* #TODO: JAkieś statusy LED'em RGB, uśpienie */
     memset((void*) Tx_buff, 0, BUFF_LEN);
     memset((void*) Rx_buff, 0, BUFF_LEN);
     memset((void*) ret_buf, 0, RET_LEN);
@@ -131,6 +138,8 @@ void setup() {
 }
 
 void loop() {
+    setLedState(IDLE);
+
     // Dla pewności wyzerowanie wyboru
     choice = '0';
     unsigned long time1 = millis() - sent1,
@@ -140,28 +149,28 @@ void loop() {
         (time1 <= TIMEOUT_TOTAL ||
          time4 <= TIMEOUT_TOTAL ))
             goto await;
-    
+
     // Upłynął timeout i nie mamy odpowiedzi
     if (awaiting_res1 && time1 > TIMEOUT_TOTAL) {
-    Serial.print(F("Nie otrzymano odpowiedzi od W3 w ciągu "));
-    Serial.print(TIMEOUT_TOTAL/1000, DEC);
-    Serial.println(F(" sekund"));
-    awaiting_res1 = 0;
-    return;
+        Serial.print(F("Nie otrzymano odpowiedzi od W3 w ciągu "));
+        Serial.print(TIMEOUT_TOTAL/1000, DEC);
+        Serial.println(F(" sekund"));
+        awaiting_res1 = 0;
+        return;
     }
 
     if (awaiting_res4 && time4 > TIMEOUT_TOTAL) {
-    Serial.print(F("Nie otrzymano odpowiedzi od W4 w ciągu "));
-    Serial.print(TIMEOUT_TOTAL/1000, DEC);
-    Serial.println(F(" sekund"));
-    awaiting_res4 = 0;
-    return;
+        Serial.print(F("Nie otrzymano odpowiedzi od W4 w ciągu "));
+        Serial.print(TIMEOUT_TOTAL/1000, DEC);
+        Serial.println(F(" sekund"));
+        awaiting_res4 = 0;
+        return;
     }
 
     // Wyczyszczenie bufora Rx
     while (Serial.available())
         Serial.read();
-    
+
     Serial.print(F(MAIN_MENU_TEXT));
 
     if (!Serial.available())
@@ -169,6 +178,9 @@ void loop() {
 
     // Odczytanie odpowiedzi użytkownika
     choice = Serial.read();
+
+    // zmiana wyświetlanego stanu
+    setLedState(TRANSMITTING);
 
     // Przygotowanie bazowego REQ
     memset(Tx_buff, 0, BUFF_LEN);
@@ -197,7 +209,10 @@ void loop() {
     Serial.print(F("Wysłano zapytanie, oczekiwanie na odpowiedź przez "));
     Serial.print(TIMEOUT_TOTAL/1000, DEC);
     Serial.println(F(" sekund"));
-    
+
+    // zmiana wyświetlanego ponownie na IDLE, zaraz konkretny da handleLHS
+    setLedState(IDLE);
+
     // Oczekiwanie na to co wróci
     await:
     handleLHS(Serial1, SERIAL1_NEI);

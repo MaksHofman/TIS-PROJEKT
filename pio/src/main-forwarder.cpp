@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <CRC.h>
 #include "api/Common.h"
+#include "led_helper.h"
 #include "uart_helper.h"
 #include "const_defs.h"
 #include "proto_defs.h"
@@ -38,7 +39,9 @@ void handleLHS(Uart &from, uint8_t from_id) {
     // Tu może przyjść: ret, dead, res
     if (!(recv >= RET_LEN))
         return;
-        
+
+    setLedState(RECEIVING);
+
     // Coś mi się czuje, że gdzieś zgubię tą synchronizację, o której pisałem przy robieniu protokołu...
     from.readBytes(Rx_buff, min(BUFF_LEN, recv));
 
@@ -47,15 +50,20 @@ void handleLHS(Uart &from, uint8_t from_id) {
     // to przed upływem timeout'u lub otrzymaniem odpowiedzi nic nie wyśle
     crc_valid = GET_CRC(Rx_buff) == calcCRC8(Rx_buff, recv - 1);
     if (!crc_valid) {
+        setLedState(GENERIC_ERROR);
         SET_DST(ret_buf, from_id);
         SET_CRC(ret_buf, calcCRC8(ret_buf, RET_LEN - 1));
         from.write(ret_buf, RET_LEN);
         return;
     }
 
+    setLedState(TRANSMITTING);
+
     switch (GET_TYP(Rx_buff)) {
         // Nic innego w tamtą stronę nie wysyłamy, chyba że coś poszło grubo nie tak...
-        case MSG_T_RET: from.write(Tx_buff, REQ_LEN); break;
+        case MSG_T_RET:
+        from.write(Tx_buff, REQ_LEN);
+        break;
         case MSG_T_RES:
         memcpy(Tx_buff, Rx_buff, RES_LEN);
         Serial1.write(Tx_buff, RES_LEN);
@@ -69,7 +77,7 @@ void handleLHS(Uart &from, uint8_t from_id) {
         break;
         default: break;
     }
-    
+
 }
 
 void setup() {
@@ -79,7 +87,6 @@ void setup() {
     Serial4.begin(UART_BAUD);
 
     setup_sercoms();
-    /* #TODO: JAkieś statusy LED'em RGB, uśpienie */
     memset((void*) Tx_buff, 0, BUFF_LEN);
     memset((void*) Rx_buff, 0, BUFF_LEN);
     memset((void*) ret_buf, 0, RET_LEN);
@@ -87,6 +94,8 @@ void setup() {
 }
 
 void loop() {
+    setLedState(IDLE);
+
     // Z prawej do lewej
     uint8_t recvR = Serial1.available();
     uint8_t crc_valid = 0;
@@ -94,12 +103,15 @@ void loop() {
     if (!(recvR >= REQ_LEN))
         goto left_to_right; // WARNING: goto
 
+    setLedState(RECEIVING);
+
     memset(Rx_buff, 0, BUFF_LEN);
     Serial1.readBytes(Rx_buff, min(recvR, BUFF_LEN));
 
     // Z tej strony spodziewamy się tylko req lub ret, więc mamy szczęście, że obydwie są po 2B
     crc_valid = GET_CRC(Rx_buff) == calcCRC8(Rx_buff, RES_LEN - 1);
     if (!crc_valid) {
+        setLedState(GENERIC_ERROR);
         SET_DST(ret_buf, W0_ID);
         SET_CRC(ret_buf, calcCRC8(ret_buf, RET_LEN - 1));
         Serial1.write(ret_buf, RET_LEN);

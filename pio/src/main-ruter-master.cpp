@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <CRC.h>
 #include "api/Common.h"
+#include "led_helper.h"
 #include "uart_helper.h"
 #include "const_defs.h"
 #include "proto_defs.h"
@@ -35,6 +36,7 @@ void handleRHS(Uart &from, uint8_t from_id) {
     uint8_t crc_valid = 0;
     uint8_t dst = 0;
     if(recv >= REQ_LEN) {
+        setLedState(RECEIVING);
         memset((void*) Rx_buff, 0, BUFF_LEN);
         /* Teoretycznie możemy się akurat wstrzelić tutaj w trakcie odbierania, ale pal 5, może zadziała */
         from.readBytes(Rx_buff, min(recv, BUFF_LEN));
@@ -52,14 +54,16 @@ void handleRHS(Uart &from, uint8_t from_id) {
 #endif
                 crc_valid)
                     break;
-            
+
             // CRC się nie zgadza
             if(!crc_valid) {
+                setLedState(GENERIC_ERROR);
                 SET_DST(ret_buf, from_id);
                 SET_CRC(ret_buf, calcCRC8(ret_buf, RET_LEN - 1));
                 from.write(ret_buf, RET_LEN);
                 break;
             } else {
+                setLedState(TRANSMITTING);
                 // Wiadomość to request do jednego z moich SLAVE'ów i ma poprawne CRC, forwarduję
                 // Czekamy na odpowiedź
                 awaiting_res = 1 | (GET_DST(Rx_buff) << 1);
@@ -73,15 +77,16 @@ void handleRHS(Uart &from, uint8_t from_id) {
 
             break;
             case MSG_T_RET:
+            setLedState(TRANSMITTING);
             if( GET_DST(Rx_buff) == MY_ID &&
                 calcCRC8(Rx_buff, RET_LEN - 1) == GET_CRC(Rx_buff) )
                     from.write(Tx_buff, RES_LEN);
             break;
             default:
-            /* 
+            /*
              * Otrzymaliśmy wiadomość, która nie powinna trafić do tego węzła,
-             * można dać tu jeszcze jakieś mryganie LED'em na czarwono czy coś
              */
+            setLedState(GENERIC_ERROR);
             // czyścimy bufor from
             while(from.available())
                 from.readBytes(Rx_buff, min(recv,BUFF_LEN));
@@ -90,7 +95,6 @@ void handleRHS(Uart &from, uint8_t from_id) {
         }
     }
     memset((void*) Rx_buff, 0, BUFF_LEN);
-
 }
 
 void setup() {
@@ -109,11 +113,15 @@ void setup() {
 }
 
 void loop() {
+    setLedState(IDLE);
+
     handleRHS(Serial4, SERIAL4_ID);
     handleRHS(Serial3, SERIAL3_ID);
-   
+
     if (awaiting_res && (millis() - sent) > SLAVE_TIMEOUT) {
         // sent dead
+        setLedState(GENERIC_ERROR);
+
         memset((void*) Tx_buff, 0, BUFF_LEN);
         SET_DST(Tx_buff, W0_ID);
         SET_TYP(Tx_buff, MSG_T_DEAD);
@@ -133,7 +141,10 @@ void loop() {
         return;
 
     if (recv >= RET_LEN) {
+        setLedState(RECEIVING);
         Serial1.readBytes(Rx_buff, min(BUFF_LEN, recv));
+
+        setLedState(TRANSMITTING);
         switch (GET_TYP(Rx_buff)) {
             case MSG_T_RET:
             if( GET_DST(Rx_buff) == MY_ID &&
