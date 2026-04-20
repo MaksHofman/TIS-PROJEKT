@@ -19,6 +19,8 @@
 byte Tx_buff[BUFF_LEN], Rx_buff[BUFF_LEN];
 byte ret_msg[RET_LEN];
 
+uint8_t maxVals[5] = {0};
+
 void setup() {
     Serial1.begin(UART_BAUD);
     setup_sercoms();
