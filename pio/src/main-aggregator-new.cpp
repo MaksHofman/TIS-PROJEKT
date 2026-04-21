@@ -143,6 +143,12 @@ void setup() {
     setLedState(NONE);
 }
 
+void stupidloop() {
+    setLedState(IDLE);
+    setLedState(TRANSMITTING);
+    setLedState(RECEIVING);
+}
+
 void loop() {
     setLedState(IDLE);
 
