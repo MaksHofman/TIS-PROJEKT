@@ -31,7 +31,7 @@
 #define SERIAL4_TX_PAD UART_TX_PAD_0
 #define SERIAL4_FUNCTION PIO_SERCOM_ALT
 
-#define UART_BAUD   9600
+#define UART_BAUD 10
 
 // Buffer length
 #define BUFF_LEN 5

@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <CRC.h>
+// #include <CRC.h>
 #include "api/Common.h"
 #include "led_helper.h"
 #include "uart_helper.h"
@@ -7,7 +7,7 @@
 #include "proto_defs.h"
 
 /* Oczywiście to może być W2 lub W1 */
-#define MY_ID W2_ID
+#define MY_ID W1_ID
 
 #if MY_ID==W2_ID
 #define MY_SLAVE1 S2_ID

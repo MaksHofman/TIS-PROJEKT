@@ -68,10 +68,11 @@
 * Getter for CRC (one size fits all) 
 * WARNING: Frame sync (read PROTO_DEFS_README.md)
 */
-#define GET_CRC(MSG) ( GET_TYP((MSG)) == MSG_T_REQ ? (*(GET_PTR((MSG), _CRC_REQ_OFF))) : \
-                       GET_TYP((MSG)) == MSG_T_RES ? (*(GET_PTR((MSG), _CRC_RES_OFF))) : \
-                       GET_TYP((MSG)) == MSG_T_DEAD ? (*(GET_PTR((MSG), _CRC_DEAD_OFF))) : \
-                       GET_TYP((MSG)) == MSG_T_RET ? (*(GET_PTR((MSG), _CRC_RET_OFF))) : 0)
+// #define GET_CRC(MSG) ( GET_TYP((MSG)) == MSG_T_REQ ? (*(GET_PTR((MSG), _CRC_REQ_OFF))) : \
+//                        GET_TYP((MSG)) == MSG_T_RES ? (*(GET_PTR((MSG), _CRC_RES_OFF))) : \
+//                        GET_TYP((MSG)) == MSG_T_DEAD ? (*(GET_PTR((MSG), _CRC_DEAD_OFF))) : \
+//                        GET_TYP((MSG)) == MSG_T_RET ? (*(GET_PTR((MSG), _CRC_RET_OFF))) : 0)
+#define GET_CRC(MSG) 1
 
 /* Setters for const fields */
 #define SET_DST(MSG,DST) do { \

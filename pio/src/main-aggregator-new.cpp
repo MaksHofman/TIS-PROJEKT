@@ -1,6 +1,5 @@
 #include <Arduino.h>
-#include <CRC.h>
-#include <cstdint>
+// #include <CRC.h>
 #include <sys/_intsup.h>
 #include "api/Common.h"
 #include "led_helper.h"
@@ -35,6 +34,8 @@ void handleLHS(Uart &from, uint8_t from_id) {
     setLedState(RECEIVING);
 
     from.readBytes(Rx_buff, min(BUFF_LEN, recv));
+    setLedState(IDLE);
+    setLedState(NONE);
 
     crc_valid = GET_CRC(Rx_buff) == calcCRC8(Rx_buff, recv - 1);
 
@@ -42,6 +43,8 @@ void handleLHS(Uart &from, uint8_t from_id) {
         SET_DST(ret_buf, from_id);
         SET_CRC(ret_buf, calcCRC8(ret_buf, RET_LEN - 1));
         from.write(ret_buf, RET_LEN);
+        setLedState(GENERIC_ERROR);
+        setLedState(NONE);
         return;
     }
 
@@ -50,6 +53,8 @@ void handleLHS(Uart &from, uint8_t from_id) {
         case MSG_T_RET:
         setLedState(RETRANSMITTING);
         from.write(Tx_buff, REQ_LEN);
+        setLedState(GENERIC_ERROR);
+        setLedState(NONE);
         break;
         case MSG_T_DEAD:
         setLedState(GENERIC_ERROR);
@@ -135,6 +140,7 @@ void setup() {
     memset((void*) Rx_buff, 0, BUFF_LEN);
     memset((void*) ret_buf, 0, RET_LEN);
     SET_TYP(ret_buf, MSG_T_RET);
+    setLedState(NONE);
 }
 
 void loop() {
@@ -168,13 +174,13 @@ void loop() {
     }
 
     // Wyczyszczenie bufora Rx
-    while (Serial.available())
-        Serial.read();
+    if (!awaiting_res1 && !awaiting_res4)
+        while (Serial.available())
+            Serial.read();
 
     Serial.print(F(MAIN_MENU_TEXT));
 
-    if (!Serial.available())
-        return;
+    while (!Serial.available());
 
     // Odczytanie odpowiedzi użytkownika
     choice = Serial.read();
@@ -202,8 +208,12 @@ void loop() {
     // Wysłanie REQ i zapisanie czasu wysłania
     Serial1.write(Tx_buff, REQ_LEN);
     sent1 = millis();
+    setLedState(IDLE);
+    setLedState(NONE);
     Serial4.write(Tx_buff, REQ_LEN);
     sent4 = millis();
+    setLedState(IDLE);
+    setLedState(NONE);
 
     // Zapewnienie użytkownika
     Serial.print(F("Wysłano zapytanie, oczekiwanie na odpowiedź przez "));

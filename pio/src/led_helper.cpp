@@ -16,29 +16,42 @@ void setLedState(STATE state) {
     switch (state) {
         case IDLE: {
             // white
-            setLedColor(255, 255, 255);
+            setLedColor(0, 0, 0);
         }
         case SLEEP: {
             // dim white - call it gray
-            setLedColor(10, 10, 10);
+            setLedColor(245, 245, 245);
         }
         case RECEIVING: {
             // blue
-            setLedColor(0, 0, 255);
+            setLedColor(255, 0, 0);
         }
         case RETRANSMITTING: {
             // green (cause blue+yellow)
-            setLedColor(0, 255, 0);
+            setLedColor(255, 0, 255);
         }
         case TRANSMITTING: {
             // yellow
-            setLedColor(255, 0, 255);
+            setLedColor(0, 255, 0);
         }
         case GENERIC_ERROR: {
             // red
-            setLedColor(255, 0, 0);
+            setLedColor(0, 255, 255);
+        }
+        case NONE: {
+            // red
+            setLedColor(255, 255, 255);
         }
 
         break;
     }
+
+    Serial.print("state: ");Serial.print(state);Serial.print("\t");
+    Serial.println("delaying");
+    delay(1000);
+}
+
+
+uint8_t calcCRC8(byte* buff, uint8_t len) {
+    return 1;
 }
