@@ -1,15 +1,12 @@
 #include <Arduino.h>
-// #include <CRC.h>
 #include "led_helper.h"
 #include "uart_helper.h"
 #include "const_defs.h"
 #include "proto_defs.h"
 #include "color_helper.h"
 
-/* Na razie trzeba zmieniać ręcznie, ale to można poprawić */
 #define MY_ID S1_ID
 
-/* Master się przypisze sam */
 #if MY_ID==S2_ID || MY_ID==S3_ID
 #define MASTER_ID W2_ID
 #elif MY_ID==S1_ID || MY_ID==S4_ID || MY_ID==S5_ID
@@ -27,87 +24,67 @@ void setup() {
 
     memset((void*) Tx_buff, 0, BUFF_LEN);
     memset((void*) Rx_buff, 0, BUFF_LEN);
-    /* Coś do usypiania, jak zadziała reszta to można spróbować */
-    // // Opcjonalnie: upewnienie się, że tryb głębokiego snu jest wyłączony,
-    // // aby instrukcja WFI usypiała tylko CPU (IDLE mode), a nie całe urządzenie (STANDBY).
-    // SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+
     SET_DST(ret_msg, MASTER_ID);
     SET_TYP(ret_msg, MSG_T_RET);
     SET_CRC(ret_msg, calcCRC8(ret_msg, RET_LEN - 1));
+    setLedState(IDLE);
 }
 
 void loop() {
-    setLedState(IDLE);
+    updateLedTask();
 
-    uint8_t recv = Serial1.available();
-    uint8_t crc_valid = 0;
-    if(recv >= REQ_LEN) {
-        setLedState(RECEIVING);
-        // Czyszczenia bufora nigdy za dużo
+    while (Serial1.available() > 0) {
+        uint8_t typ = (Serial1.peek() & 0x0E) >> 1;
+        uint8_t exp_len = 0;
+
+        if (typ == MSG_T_REQ) exp_len = REQ_LEN;
+        else if (typ == MSG_T_RES) exp_len = RES_LEN;
+        else if (typ == MSG_T_DEAD) exp_len = DEAD_LEN;
+        else if (typ == MSG_T_RET) exp_len = RET_LEN;
+        else { Serial1.read(); continue; }
+
+        if (Serial1.available() < exp_len) break; // Zbyt mało bajtów
+
+        triggerLedState(RECEIVING);
         memset((void*) Rx_buff, 0, BUFF_LEN);
-        /* Teoretycznie możemy się akurat wstrzelić tutaj w trakcie odbierania, ale pal 5, może zadziała */
-        Serial1.readBytes(Rx_buff, min(recv, BUFF_LEN));
+        Serial1.readBytes(Rx_buff, exp_len);
+
+        if (GET_CRC(Rx_buff) != calcCRC8(Rx_buff, exp_len - 1)) {
+            while(Serial1.available()) Serial1.read();
+            Serial1.write(ret_msg, RET_LEN);
+            triggerLedState(GENERIC_ERROR);
+            break;
+        }
+
         switch(GET_TYP(Rx_buff)) {
             case MSG_T_REQ: {
-                setLedState(TRANSMITTING);
-                /* Tu trzeba przygotować odpowiedź */
-                // Odpowiadamy tylko na REQ skierowane do nas z poprawnym CRC8, inaczej prosimy o retransmisję
-                crc_valid = calcCRC8(Rx_buff, REQ_LEN - 1) == GET_CRC(Rx_buff);
-                // Pomyłka, CRC się zgadza, ale to nie powinno tu trafić
-                if(GET_DST(Rx_buff) != MY_ID && crc_valid)
-                    break;
+                if (GET_DST(Rx_buff) != MY_ID) continue; // Ramka OK, ale nie do nas (ignoruj)
 
-                // Może akurat trafiło na dst
-                if(!crc_valid) {
-                    Serial1.write(ret_msg, RET_LEN);
-                    break;
-                }
-
-                // Czyścimy bufor nadawczy
+                triggerLedState(TRANSMITTING);
                 memset((void*) Rx_buff, 0, BUFF_LEN);
-                // Odpowiedzi zawsze do W0
+
                 SET_DST(Tx_buff, W0_ID);
                 SET_TYP(Tx_buff, MSG_T_RES);
                 SET_SRC(Tx_buff, MY_ID);
-                // w sumie mamy 12 bitów payload-u + 5 padingu (TODO: zaktualizaować PROTO_DEFS_README).
-                // 4 poszły na src_id /\, co daje nam 13 -> 3x4b na RGB + 1 padingu
+
                 uint16_t payload =
-                    ((readColor(COLOR_RED) >> 4) << 8) |
-                    ((readColor(COLOR_GREEN) >> 4) << 4) |
-                    (readColor(COLOR_BLUE) >> 4);
+                ((readColor(COLOR_RED) >> 4) << 8) |
+                ((readColor(COLOR_GREEN) >> 4) << 4) |
+                (readColor(COLOR_BLUE) >> 4);
                 SET_READ(Tx_buff, payload);
 
                 SET_CRC(Tx_buff, calcCRC8(Tx_buff, RES_LEN - 1));
+                Serial1.write(Tx_buff, RES_LEN);
+                break;
             }
             case MSG_T_RET: {
-                setLedState(RETRANSMITTING);
-                /* Z węzła dummy można odesłać tylko MSG_T_RES */
-                // Jak dostaniemy req nie ret to sprawdzamy 2x to samo, ale co tam, jakość kodu miała się nie liczyć
-                if( GET_DST(Rx_buff) == MY_ID &&
-                    calcCRC8(Rx_buff, RET_LEN - 1) == GET_CRC(Rx_buff) )
-                        Serial1.write(Tx_buff, RES_LEN);
+                if( GET_DST(Rx_buff) == MY_ID ) {
+                    Serial1.write(Tx_buff, RES_LEN);
+                    triggerLedState(RETRANSMITTING);
+                }
+                break;
             }
-            break;
-            default:
-            /*
-             * Otrzymaliśmy wiadomość, która nie powinna trafić do węzła dummy,
-             * można dać tu jeszcze jakieś mryganie LEDEM na czarwono czy coś
-             */
-            // czyścimy bufor Serial1
-            while(Serial1.available())
-                Serial1.readBytes(Rx_buff, min(recv,BUFF_LEN));
-            // Czyścimy bufor na odebrane wiadomości
-            memset((void*) Rx_buff, 0, BUFF_LEN);
         }
-        /* #TODO: Sytuacja w której to CRC8 w wiadomości do nas się nie zgada,
-         * bo aktualnie to jak przekłamie coś na typie wiadomości to to po prostu olewamy,
-         * tak samo jak CRC się nie zgadza (WARNING: Jak przekłamie w 2 strony to może powstać pętla,
-         * w której przerzucamy się retransmisją i retransmitujemy retransmisję xD)
-         */
     }
-    /* Jeszcze raz coś do snu, zobaczymy jak pójdzie bez spania */
-    setLedState(SLEEP);
-    // SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
-    // __WFI();
-
 }

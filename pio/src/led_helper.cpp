@@ -2,6 +2,10 @@
 #include "USB/USBAPI.h"
 #include "variant.h"
 
+unsigned long _led_timer = 0;
+unsigned long _led_duration = 0;
+STATE _current_temp_state = IDLE;
+
 void setupStateLed() {
     pinMode(LED_PIN_R, OUTPUT);
     pinMode(LED_PIN_G, OUTPUT);
