@@ -41,6 +41,6 @@
                         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 ### Pola:
-- Wszystkie pola jak wyżej przekopiowane przez W0 z tą różnicą, że jest zrobione miejsce na `TIMESTAMP2`
+- Wszystkie pola jak wyżej przekopiowane przez W0 z tą różnicą, miejsce na `TIMESTAMP2` jest robione po stronie Sx (tak, żeby nie zaburzać pomiaru RTT)
 - Przy przekazywaniu przez Wx zmniejszany jest o 1 `nhop`
 - Pole `r` jest ustawione na 1 (routing kierowany)

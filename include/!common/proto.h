@@ -20,6 +20,20 @@
 #define RES 0
 #define SYS_CODE 0b10101010
 
+// Identyfikatory węzłów < 8:
+#define W0_ID 0
+#define W1_ID 1
+#define W2_ID 2
+#define W3_ID 3
+#define W4_ID 4
+#define W5_ID 5
+
+// Identyfikatory sensorów >= 8
+#define S1_ID 8
+
+#define IS_SENSOR(ID)               (((ID) & 0b1000) >> 3)
+#define SENSOR_ID(ID)               (((ID) & 0b0111) + 1)
+
 // Typy wiadomości
 #define MSG_T_READ 0x0
 #define MSG_T_MEAS_RTT 0x1

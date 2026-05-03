@@ -22,5 +22,6 @@
  * Parametry protokołu
  */
 #define MAX_NHOPS 1
+#define BUFF_SIZE 20
 
 #endif
