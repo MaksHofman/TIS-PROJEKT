@@ -10,12 +10,46 @@
 #define MY_ID W1_ID
 
 byte rxBuff[BUFF_SIZE], txBuff[BUFF_SIZE];
+int currentPacketSize = 0;
+
+// Flagi dla przerwań
+volatile bool flagPacketReceived = false;
+volatile bool flagCadDone = false;
+volatile bool flagCadSignalDetected = false;
+
+// Definicja stanów naszej maszyny
+enum RouterState {
+    STATE_IDLE,             // Nasłuchuje (nic się nie dzieje)
+    STATE_PROCESS_PACKET,   // Analizuje to, co przyszło
+    STATE_DO_CAD,           // Zleca skanowanie eteru (Listen Before Talk)
+    STATE_WAIT_CAD,         // Czeka na wynik skanowania
+    STATE_WAIT_RANDOM,      // Eter zajęty - czeka losowy czas
+    STATE_TRANSMIT          // Eter wolny - nadaje
+};
+
+RouterState currentState = STATE_IDLE;
+
+// Zmienne do nieblokującego czekania
+unsigned long waitStartTime = 0;
+unsigned long waitDuration = 0;
+
+void onRxDone(int packetSize) {
+    currentPacketSize = packetSize;
+    flagPacketReceived = true; // Zgłoś do loop(), że jest paczka
+}
+
+void onCadDone(boolean signal) {
+    flagCadSignalDetected = signal;
+    flagCadDone = true; // Zgłoś do loop(), że skanowanie zakończone
+}
 
 void setup() {
     Serial.begin(115200);
+    // W środowisku produkcyjnym (zasilanie z powerbanka) usuń while(!Serial), 
+    // inaczej kod nie ruszy bez podłączonego komputera!
+    while(!Serial); 
 
 #ifdef DEBUG
-    while(!Serial);
     Serial.println(F("Inicjalizacja węzła router"));
 #endif
 
@@ -25,111 +59,132 @@ void setup() {
     SETUP_LORA;
     LoRa.onCadDone(onCadDone);
     LoRa.onReceive(onRxDone);
-    LoRa.receive();
+    LoRa.receive(); // Zaczynamy od nasłuchu
 }
 
 void loop() {
-    
-}
+    // Serce programu - maszyna stanów
+    switch (currentState) {
 
-void onCadDone(boolean signal) {
-    // Jest sygnał, więc musimy czekać na czyste powietrze
-    if (signal) {
-        // losowe opóźnienie (w ISR xD)
-        delay(random(10, 100));
-        LoRa.channelActivityDetection();
-        return;
-    }
-
-    // wysyłamy co mamy
-    LoRa.beginPacket();
-    LoRa.write(txBuff, GET_LEN(txBuff));
-    LoRa.endPacket();
-
-}
-
-void onRxDone(int packetSize) {
-#ifdef DEBUG
-    Serial.print(F("Otrzymano pakiet o rozmiarze: "));
-    Serial.println(packetSize, DEC);
-#endif
-// Tutaj można dać pojedyncze mrugnięcie LEDem, że coś dostaliśmy, tylko proszę użyć Timer1, żeby nie robić bezsensownego delay'a
-    // Czyścimy bufor
-    clearRx();
-
-    // Odczytujemy co dostaliśmy
-    LoRa.readBytes(rxBuff, packetSize);
-
-    // Za krótka wiadomość lub nie zgadzają się pola zarezerwowane + SYS_ID, nie nasza
-    // Tu też można jakieś statusy dawać LEDem
-    switch (validateMsg(rxBuff, packetSize)) {
-        case 1:
-#ifdef DEBUG
-        Serial.println(F("Za krótka wiadomość"));
-#endif
-        break;
-        case 2:
-#ifdef DEBUG
-        Serial.println(F("Nieznany protokół"));
-#endif
-        break;
-        case 0: goto processReceived; // Tutaj jesteśmy jak wszystko jest git do tej pory
-        default: break; // Tu się nigdy nie znajdziemy...
-    }
-
-    clearAndReturn:
-    clearRx();
-    return;
-
-    processReceived:
-    if(GET_ROUTING(rxBuff)) {
-        // Najpierw routing kierowany:
-        if(GET_HOP_NODE_ID(rxBuff, GET_NHOP(rxBuff)) != MY_ID) {
-#ifdef DEBUG
-            Serial.print(F("Otrzymano wiadomość z routingiem kierowanym, ale nie jestem następnym węzłem"));
-            clearRx();
-            return;
-#endif
-        } else {
-#ifdef DEBUG
-            Serial.println(F("Otrzymano wiadomość z routingiem kierowanym przez nas"));
-#endif
-            // Routing kierowany przez nas, więc zmniejszamy o 1 nhop i przesyłamy dalej
-            memcpy(txBuff, rxBuff, packetSize);
-            SET_NHOP(txBuff, (GET_NHOP(txBuff) - 1));
-            goto beginCAD;
-        }
-
-    } else {
-        // routing rozsiewczy
-        // sprawdzenie, czy już nie byliśmy na drodze tego pakietu i czy przypadkiem nie krąży on już zbyt długo
-        if (GET_NHOP(rxBuff) >= MAX_NHOPS) {
-#ifdef DEBUG
-            Serial.println(F("Zbyt duża ilość przeskoków, nie przesyłam dalej"));
-#endif
-            goto clearAndReturn;
-        }
-        for (int i = 1; i <= GET_NHOP(rxBuff); i++) {
-            if (GET_HOP_NODE_ID(rxBuff, i) == MY_ID) {
-#ifdef DEBUG
-                Serial.print(F("Już to przesyłałem, zapobiegamy pętli"));
-#endif
-                goto clearAndReturn;
+        case STATE_IDLE:
+            if (flagPacketReceived) {
+                flagPacketReceived = false;
+                currentState = STATE_PROCESS_PACKET;
             }
+            break;
+
+case STATE_PROCESS_PACKET: {
+            // 1. Odczyt danych z radia po SPI
+            clearRx();
+            LoRa.readBytes(rxBuff, currentPacketSize);
+
+            // 2. Walidacja z "Early Exit" (zamiast zagnieżdżania)
+            int valStatus = validateMsg(rxBuff, currentPacketSize);
+            if (valStatus != 0) {
+#ifdef DEBUG
+                Serial.println(valStatus == 1 ? F("Za krotka wiadomosc") : F("Nieznany protokol"));
+#endif
+                currentState = STATE_IDLE; 
+                break; // Kończymy ten case natychmiast!
+            }
+
+            // 3. ROUTING KIEROWANY
+            if (GET_ROUTING(rxBuff)) {
+                if(GET_HOP_NODE_ID(rxBuff, GET_NHOP(rxBuff)) != MY_ID) {
+#ifdef DEBUG
+                    Serial.println(F("Kierowane: ale nie jestem nastepnym wezlem. Ignoruje."));
+#endif
+                    currentState = STATE_IDLE;
+                    break;
+                }
+                
+                // Przepisanie pakietu, bo idzie przez nas
+#ifdef DEBUG
+                Serial.println(F("Kierowane: przez nas. Przesylam dalej."));
+#endif
+                memcpy(txBuff, rxBuff, currentPacketSize);
+                SET_NHOP(txBuff, (GET_NHOP(txBuff) - 1));
+                currentState = STATE_DO_CAD;
+                break;
+            } 
+            
+            // 4. ROUTING ROZSIEWCZY (jeśli kod dotarł tu, to na pewno nie jest kierowany)
+            if (GET_NHOP(rxBuff) >= MAX_NHOPS) {
+#ifdef DEBUG
+                Serial.println(F("Zbyt duza ilosc przeskokow (TTL). Odrzucam."));
+#endif
+                currentState = STATE_IDLE;
+                break;
+            }
+
+            // Sprawdzanie pętli
+            bool alreadySeen = false;
+            for (int i = 1; i <= GET_NHOP(rxBuff); i++) {
+                if (GET_HOP_NODE_ID(rxBuff, i) == MY_ID) {
+                    alreadySeen = true;
+                    break;
+                }
+            }
+
+            if (alreadySeen) {
+#ifdef DEBUG
+                Serial.println(F("Rozsiewcze: Juz to przesylalem, zapobiegam petli."));
+#endif
+                currentState = STATE_IDLE;
+                break;
+            } 
+
+            // Jeśli przeszedł wszystkie testy – nadajemy
+            memcpy(txBuff, rxBuff, currentPacketSize);
+            SET_NHOP(txBuff, (GET_NHOP(txBuff) + 1));
+            SET_HOP(txBuff, GET_NHOP(txBuff), MY_ID);
+            SET_SYS_CODE(txBuff, SYS_CODE);
+            
+            currentState = STATE_DO_CAD;
+            break;
         }
+        case STATE_DO_CAD:
+            // Zlecamy zbadanie kanału i natychmiast wychodzimy ze stanu
+            flagCadDone = false;
+            currentState = STATE_WAIT_CAD;
+            LoRa.channelActivityDetection();
+            break;
 
-        memcpy(txBuff, rxBuff, packetSize);
-        // jesteśmy kolejnym przeskokiem
-        SET_NHOP(txBuff, (GET_NHOP(txBuff) + 1));
-        // dodanie swojego ID do listy
-        SET_HOP(txBuff, GET_NHOP(txBuff), MY_ID);
-        // poprawienie SYS_CODE
-        SET_SYS_CODE(txBuff, SYS_CODE);
+        case STATE_WAIT_CAD:
+            // Czekamy, aż przerwanie onCadDone przestawi flagę
+            if (flagCadDone) {
+                flagCadDone = false;
+                if (flagCadSignalDetected) {
+#ifdef DEBUG
+                    Serial.println(F("Eter zajety. Czekam random..."));
+#endif
+                    waitDuration = random(10, 100);
+                    waitStartTime = millis();
+                    currentState = STATE_WAIT_RANDOM;
+                } else {
+                    currentState = STATE_TRANSMIT;
+                }
+            }
+            break;
+
+        case STATE_WAIT_RANDOM:
+            // Odpowiednik delay() ale pozwala działać innym rzeczom w tle!
+            if (millis() - waitStartTime >= waitDuration) {
+                currentState = STATE_DO_CAD; // Po odczekaniu, spróbuj ponownie zbadać eter
+            }
+            break;
+
+        case STATE_TRANSMIT:
+#ifdef DEBUG
+            Serial.println(F("Eter wolny. Nadawanie..."));
+#endif
+            LoRa.beginPacket();
+            LoRa.write(txBuff, GET_LEN(txBuff));
+            LoRa.endPacket(); // Tu spędzi sporo czasu, ale jesteśmy w pętli loop, więc jest 100% bezpiecznie!
+            
+            // Koniec! Wracamy do bycia routerem nasłuchującym
+            LoRa.receive(); 
+            currentState = STATE_IDLE;
+            break;
     }
-
-
-    // Tu będzie kopiowanie bufora rx do tx i początek cad
-    beginCAD:
-    LoRa.channelActivityDetection();
-
 }
