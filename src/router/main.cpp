@@ -5,7 +5,7 @@
 #include "router/main.h"
 #include "!common/proto.h"
 #include "router/helper.h"
-#include "api/Common.h"
+#include "!common/led_helper.h"
 
 #define MY_ID W1_ID
 
@@ -44,12 +44,9 @@ void onCadDone(boolean signal) {
 }
 
 void setup() {
-    Serial.begin(115200);
-    // W środowisku produkcyjnym (zasilanie z powerbanka) usuń while(!Serial), 
-    // inaczej kod nie ruszy bez podłączonego komputera!
-    while(!Serial); 
-
 #ifdef DEBUG
+    Serial.begin(115200);
+    while(!Serial); 
     Serial.println(F("Inicjalizacja węzła router"));
 #endif
 
@@ -60,9 +57,11 @@ void setup() {
     LoRa.onCadDone(onCadDone);
     LoRa.onReceive(onRxDone);
     LoRa.receive(); // Zaczynamy od nasłuchu
+    SETUP_LED;
 }
 
 void loop() {
+    blink();
     // Serce programu - maszyna stanów
     switch (currentState) {
 
@@ -102,6 +101,7 @@ case STATE_PROCESS_PACKET: {
 #ifdef DEBUG
                 Serial.println(F("Kierowane: przez nas. Przesylam dalej."));
 #endif
+                add_blinks(1);
                 memcpy(txBuff, rxBuff, currentPacketSize);
                 SET_NHOP(txBuff, (GET_NHOP(txBuff) - 1));
                 currentState = STATE_DO_CAD;
@@ -183,7 +183,8 @@ case STATE_PROCESS_PACKET: {
             LoRa.endPacket(); // Tu spędzi sporo czasu, ale jesteśmy w pętli loop, więc jest 100% bezpiecznie!
             
             // Koniec! Wracamy do bycia routerem nasłuchującym
-            LoRa.receive(); 
+            LoRa.receive();
+            add_blinks(2);
             currentState = STATE_IDLE;
             break;
     }
