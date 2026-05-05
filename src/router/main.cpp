@@ -81,7 +81,9 @@ case STATE_PROCESS_PACKET: {
             int valStatus = validateMsg(rxBuff, currentPacketSize);
             if (valStatus != 0) {
 #ifdef DEBUG
+                BEGIN_DEBUG;
                 Serial.println(valStatus == 1 ? F("Za krotka wiadomosc") : F("Nieznany protokol"));
+                END_DEBUG;
 #endif
                 currentState = STATE_IDLE; 
                 break; // Kończymy ten case natychmiast!
@@ -91,7 +93,9 @@ case STATE_PROCESS_PACKET: {
             if (GET_ROUTING(rxBuff)) {
                 if(GET_HOP_NODE_ID(rxBuff, GET_NHOP(rxBuff)) != MY_ID) {
 #ifdef DEBUG
+                    BEGIN_DEBUG;
                     Serial.println(F("Kierowane: ale nie jestem nastepnym wezlem. Ignoruje."));
+                    END_DEBUG;
 #endif
                     currentState = STATE_IDLE;
                     break;
@@ -99,7 +103,9 @@ case STATE_PROCESS_PACKET: {
                 
                 // Przepisanie pakietu, bo idzie przez nas
 #ifdef DEBUG
+                BEGIN_DEBUG;
                 Serial.println(F("Kierowane: przez nas. Przesylam dalej."));
+                END_DEBUG;
 #endif
                 add_blinks(1);
                 memcpy(txBuff, rxBuff, currentPacketSize);
@@ -111,7 +117,9 @@ case STATE_PROCESS_PACKET: {
             // 4. ROUTING ROZSIEWCZY (jeśli kod dotarł tu, to na pewno nie jest kierowany)
             if (GET_NHOP(rxBuff) >= MAX_NHOPS) {
 #ifdef DEBUG
+                BEGIN_DEBUG;
                 Serial.println(F("Zbyt duza ilosc przeskokow (TTL). Odrzucam."));
+                END_DEBUG;
 #endif
                 currentState = STATE_IDLE;
                 break;
@@ -128,7 +136,9 @@ case STATE_PROCESS_PACKET: {
 
             if (alreadySeen) {
 #ifdef DEBUG
+                BEGIN_DEBUG;
                 Serial.println(F("Rozsiewcze: Juz to przesylalem, zapobiegam petli."));
+                END_DEBUG;
 #endif
                 currentState = STATE_IDLE;
                 break;
@@ -156,7 +166,9 @@ case STATE_PROCESS_PACKET: {
                 flagCadDone = false;
                 if (flagCadSignalDetected) {
 #ifdef DEBUG
+                    BEGIN_DEBUG;
                     Serial.println(F("Eter zajety. Czekam random..."));
+                    END_DEBUG;
 #endif
                     waitDuration = random(10, 100);
                     waitStartTime = millis();
@@ -176,7 +188,9 @@ case STATE_PROCESS_PACKET: {
 
         case STATE_TRANSMIT:
 #ifdef DEBUG
+            BEGIN_DEBUG;
             Serial.println(F("Eter wolny. Nadawanie..."));
+            END_DEBUG;
 #endif
             LoRa.beginPacket();
             LoRa.write(txBuff, GET_LEN(txBuff));
