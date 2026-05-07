@@ -31,7 +31,7 @@ RouterState currentState = STATE_IDLE;
 
 // Zmienne do nieblokującego czekania
 unsigned long waitStartTime = 0;
-unsigned long waitDuration = 0;
+uint8_t waitDuration = 0;
 
 void onRxDone(int packetSize) {
     currentPacketSize = packetSize;
@@ -148,7 +148,7 @@ case STATE_PROCESS_PACKET: {
             memcpy(txBuff, rxBuff, currentPacketSize);
             SET_NHOP(txBuff, (GET_NHOP(txBuff) + 1));
             SET_HOP(txBuff, GET_NHOP(txBuff), MY_ID);
-            SET_SYS_CODE(txBuff, SYS_CODE);
+            SET_SYS_CODE(txBuff, currentPacketSize, SYS_CODE);
             
             currentState = STATE_DO_CAD;
             break;
@@ -167,10 +167,10 @@ case STATE_PROCESS_PACKET: {
                 if (flagCadSignalDetected) {
 #ifdef DEBUG
                     BEGIN_DEBUG;
-                    Serial.println(F("Eter zajety. Czekam random..."));
+                    Serial.println(F("Eter zajety. Czekam losowy czas..."));
                     END_DEBUG;
 #endif
-                    waitDuration = random(10, 100);
+                    waitDuration = LoRa.random();
                     waitStartTime = millis();
                     currentState = STATE_WAIT_RANDOM;
                 } else {
@@ -180,7 +180,6 @@ case STATE_PROCESS_PACKET: {
             break;
 
         case STATE_WAIT_RANDOM:
-            // Odpowiednik delay() ale pozwala działać innym rzeczom w tle!
             if (millis() - waitStartTime >= waitDuration) {
                 currentState = STATE_DO_CAD; // Po odczekaniu, spróbuj ponownie zbadać eter
             }
@@ -193,10 +192,10 @@ case STATE_PROCESS_PACKET: {
             END_DEBUG;
 #endif
             LoRa.beginPacket();
-            LoRa.write(txBuff, GET_LEN(txBuff));
-            LoRa.endPacket(); // Tu spędzi sporo czasu, ale jesteśmy w pętli loop, więc jest 100% bezpiecznie!
+            LoRa.write(txBuff, currentPacketSize);
+            LoRa.endPacket();
             
-            // Koniec! Wracamy do bycia routerem nasłuchującym
+            // Nasłuchiwanie
             LoRa.receive();
             add_blinks(2);
             currentState = STATE_IDLE;

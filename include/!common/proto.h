@@ -74,6 +74,7 @@
                                                      (INDEX) & 0x1 ? (*(_GET_PTR8((MSG),(_READ_NHOP_OFFSET + (((uint8_t)(INDEX)) / 2)))) & 0x0f) : \
                                                      ((*(_GET_PTR8((MSG),(_READ_NHOP_OFFSET + (((uint8_t)(INDEX)) / 2)))) >> 4 ) & 0x0f))
 
+// To makro jest trochę sketchy, bo może nie działać prawidłowo dla routingu kierowanego na routerach
 #define GET_LEN(MSG)                (GET_TYPE(MSG) ? (_MIN_MEAS_LEN + (uint8_t)(GET_NHOP(MSG) / 2)) : \
                                                      (_MIN_READ_LEN + (uint8_t)(GET_NHOP(MSG) / 2)) )
 
@@ -145,8 +146,8 @@
                                         ((*_p & 0x0f) | (((HOP) & 0x0f) << 4)); \
                                     } while(0)
 
-#define SET_SYS_CODE(MSG,CODE)      do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),(GET_LEN((MSG))-1)); \
+#define SET_SYS_CODE(MSG,LEN,CODE)      do { \
+                                        uint8_t* _p = _GET_PTR8((MSG),((LEN)-1)); \
                                         *_p = (CODE) & 0xff; \
                                     } while(0)                                    
                                                 
