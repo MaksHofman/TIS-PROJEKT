@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <LoRa.h>
-#include <cstdint>
 #include "!common/config.h"
 #include "!common/lora_init.h"
 #include "!common/proto_helper.h"

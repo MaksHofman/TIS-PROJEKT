@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <sys/_intsup.h>
 #include "!common/config.h"
 #include "!common/proto.h"
 #include "sensor/color_helper.h"
