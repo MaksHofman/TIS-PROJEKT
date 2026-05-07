@@ -4,7 +4,7 @@
 #include "!common/lora_init.h"
 #include "router/main.h"
 #include "!common/proto.h"
-#include "router/helper.h"
+#include "!common/proto_helper.h"
 #include "!common/led_helper.h"
 
 #define MY_ID W1_ID
@@ -17,7 +17,7 @@ volatile bool flagPacketReceived = false;
 volatile bool flagCadDone = false;
 volatile bool flagCadSignalDetected = false;
 
-// Definicja stanów naszej maszyny
+// Definicja stanów maszyny
 enum RouterState {
     STATE_IDLE,             // Nasłuchuje (nic się nie dzieje)
     STATE_PROCESS_PACKET,   // Analizuje to, co przyszło
@@ -71,7 +71,7 @@ void loop() {
             }
             break;
 
-case STATE_PROCESS_PACKET: {
+        case STATE_PROCESS_PACKET: {
             // 1. Odczyt danych z radia po SPI
             clearRx();
             LoRa.readBytes(rxBuff, currentPacketSize);
@@ -109,7 +109,11 @@ case STATE_PROCESS_PACKET: {
                 add_blinks(1);
                 memcpy(txBuff, rxBuff, currentPacketSize);
                 SET_NHOP(txBuff, (GET_NHOP(txBuff) - 1));
-                currentState = STATE_DO_CAD;
+
+                // Losowe opóźnienie przed CAD
+                waitDuration = LoRa.random();
+                waitStartTime = millis();
+                currentState = STATE_WAIT_RANDOM;
                 break;
             } 
             
@@ -144,12 +148,16 @@ case STATE_PROCESS_PACKET: {
             } 
 
             // Jeśli przeszedł wszystkie testy – nadajemy
+            add_blinks(1);
             memcpy(txBuff, rxBuff, currentPacketSize);
             SET_NHOP(txBuff, (GET_NHOP(txBuff) + 1));
             SET_HOP(txBuff, GET_NHOP(txBuff), MY_ID);
             SET_SYS_CODE(txBuff, currentPacketSize, SYS_CODE);
-            
-            currentState = STATE_DO_CAD;
+
+            // Losowe opóźnienie przed CAD
+            waitDuration = LoRa.random();
+            waitStartTime = millis();
+            currentState = STATE_WAIT_RANDOM;
             break;
         }
         case STATE_DO_CAD:
@@ -190,9 +198,12 @@ case STATE_PROCESS_PACKET: {
             Serial.println(F("Eter wolny. Nadawanie..."));
             END_DEBUG;
 #endif
+            // WARNING: nie wiem, czy przypadkiem tu nie trzeba dać LoRa.idle();
             LoRa.beginPacket();
             LoRa.write(txBuff, currentPacketSize);
             LoRa.endPacket();
+            // ^ to endPacket() jest blokujące, więc teraz na spokojnie można wyczyścić bufor nadawczy
+            clearTx();
             
             // Nasłuchiwanie
             LoRa.receive();

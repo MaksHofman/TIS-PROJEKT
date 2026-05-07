@@ -8,6 +8,7 @@
     LoRa.setPreambleLength(PREAMBLE_LANGTH); \
     LoRa.setSyncWord(SYNC_WORD); \
     LoRa.enableCrc(); \
+    LoRa.enableInvertIQ(); \
 } while(0)
 
 #endif

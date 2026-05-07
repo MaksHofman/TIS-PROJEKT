@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "!common/config.h"
+#include "sensor/color_helper.h"
 
 extern uint8_t maxVals[5];
 

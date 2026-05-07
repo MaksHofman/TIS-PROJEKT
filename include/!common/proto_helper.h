@@ -1,5 +1,5 @@
-#ifndef __HELPER_H__
-#define __HELPER_H__
+#ifndef __PROTO_HELPER_H__
+#define __PROTO_HELPER_H__
 
 void clearRx();
 void clearTx();
