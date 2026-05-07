@@ -46,7 +46,6 @@ void onCadDone(boolean signal) {
 void setup() {
 #ifdef DEBUG
     Serial.begin(115200);
-    while(!Serial); 
     Serial.println(F("Inicjalizacja węzła router"));
 #endif
 
