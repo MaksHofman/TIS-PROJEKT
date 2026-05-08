@@ -4,7 +4,6 @@
 #include "!common/lora_init.h"
 #include "!common/proto_helper.h"
 #include "!common/proto.h"
-#include "api/Common.h"
 #include "sensor/identity.h"
 #include "!common/led_helper.h"
 #include "sensor/msg_helper.h"
@@ -91,7 +90,7 @@ void loop() {
             } else if (millis() - lastReadTime >= READ_TIMEOUT) {
                 // Trzeba nadać pomiar
                 prepRead();
-                            // Losowe opóźnienie przed CAD
+                // Losowe opóźnienie przed CAD
                 waitDuration = LoRa.random();
                 waitStartTime = millis();
                 currentState = STATE_WAIT_RANDOM;
