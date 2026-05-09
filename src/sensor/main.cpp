@@ -199,8 +199,7 @@ void loop() {
             LoRa.receive();
             add_blinks(2);
             currentState = STATE_IDLE;
-            break;
-
+            
             break;
     }
     

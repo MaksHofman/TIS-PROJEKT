@@ -25,6 +25,7 @@
  */
 #define MAX_NHOPS 1
 #define BUFF_SIZE 22
+#define MSGS_TO_REMEMBER 10
 
 // Podłączenie sensora kolorów
 #define S0 2
