@@ -134,7 +134,10 @@ void loop() {
             if (!IS_SENSOR(src)) {
                 currentState = STATE_IDLE;
 #ifdef DEBUG
-                Serial.println(F("Otrzymano wiadomosc, ale nie od sensora"));
+                BEGIN_DEBUG;
+                Serial.print(F("Otrzymano wiadomosc, ale nie od sensora"));
+                printPath(currentPacketSize);
+                END_DEBUG;
 #endif
                 break;
             }
@@ -176,7 +179,8 @@ void loop() {
 #ifdef DEBUG
                 BEGIN_DEBUG;
                 Serial.print(F("Juz widzielismy: "));
-                Serial.println(GET_TIMESTAMP1(rxBuff));
+                Serial.print(GET_TIMESTAMP1(rxBuff));
+                printPath(currentPacketSize);
                 END_DEBUG;
 #endif
                 currentState = STATE_IDLE;

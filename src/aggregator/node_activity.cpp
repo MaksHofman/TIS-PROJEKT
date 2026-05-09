@@ -1,14 +1,15 @@
 #include <Arduino.h>
-#include <cstdint>
-#include <cstring>
 #include "!common/config.h"
 #include "!common/proto.h"
 #include "!common/proto_helper.h"
 #include "aggregator/node_activity.h"
 #include "aggregator/identity.h"
+#include "api/Common.h"
 
 extern byte rxBuff[BUFF_SIZE], txBuff[BUFF_SIZE];
 extern unsigned long seenMsgs[MSGS_TO_REMEMBER];
+extern uint8_t activeNodes;
+extern unsigned long lastSeen[8];
 
 /* Przyjmuje pierwszy hop i usuwa je wszystkie */
 void freeHops(struct hop *first) {
@@ -127,6 +128,9 @@ void printPath(uint8_t len) {
         Serial.print(GET_HOP_NODE_ID(rxBuff, i), DEC);
         if (i != nhops_in_msg)
             Serial.print(F(", "));
+        // przy okazji zaaktualizujmy kiedy je widzieliśmy
+        SET_ACTIVE(activeNodes, i, 1);
+        lastSeen[i - 1] = millis();
     }
 
 }
