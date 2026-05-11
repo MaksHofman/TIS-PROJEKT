@@ -4,12 +4,9 @@
 #include "!common/lora_init.h"
 #include "!common/proto_helper.h"
 #include "!common/proto.h"
-#include "sensor/identity.h"
 #include "!common/led_helper.h"
+#include "sensor/color_helper.h"
 #include "sensor/msg_helper.h"
-
-// Coś do kolorów
-uint8_t maxVals[5] = {0};
 
 // Bufor nadawczy i odbiorczy
 byte rxBuff[BUFF_SIZE], txBuff[BUFF_SIZE];
@@ -61,7 +58,8 @@ void setup() {
     pinMode(OUT_PIN, INPUT);
     digitalWrite(S0, HIGH);
     digitalWrite(S1, LOW);
-    // TODO: Dodać kalibrację, najlepiej z LED'em RGB
+
+    calibrateColorSensor();
 
     // Koniec sensora kolorów
 
@@ -120,7 +118,7 @@ void loop() {
 
             // ok, tu wiadomość już jest z naszego systemu, ale trzeba sprawdzić, czy musimy odpowiadać
             if(!doIHaveToRespond()) {
-#ifdef DEBUG   
+#ifdef DEBUG
                 BEGIN_DEBUG;
                 Serial.println(F("Wiadomosc nie jest dla sensora"));
                 END_DEBUG;
@@ -194,13 +192,13 @@ void loop() {
             LoRa.endPacket();
             // ^ to endPacket() jest blokujące, więc teraz na spokojnie można wyczyścić bufor nadawczy
             clearTx();
-            
+
             // Nasłuchiwanie
             LoRa.receive();
             add_blinks(2);
             currentState = STATE_IDLE;
-            
+
             break;
     }
-    
+
 }

@@ -4,7 +4,6 @@
 #include "!common/proto_helper.h"
 #include "aggregator/node_activity.h"
 #include "aggregator/identity.h"
-#include "api/Common.h"
 
 extern byte rxBuff[BUFF_SIZE], txBuff[BUFF_SIZE];
 extern unsigned long seenMsgs[MSGS_TO_REMEMBER];
