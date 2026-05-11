@@ -1,4 +1,4 @@
-#ifndef __MSG_HELPER_H__
+#ifndef __MSG_HELPER_H
 #define __MSG_HELPER_H
 
 void prepRead();

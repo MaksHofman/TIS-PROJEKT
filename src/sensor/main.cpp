@@ -95,6 +95,10 @@ void loop() {
             }
             break;
         case STATE_PROCESS_PACKET: {
+            // 1. Odczyt danych z radia po SPI
+            clearRx();
+            LoRa.readBytes(rxBuff, currentPacketSize);
+
             // Sprawdzamy co nam wpadło
             uint8_t isValid = validateMsg(rxBuff, currentPacketSize);
             if (isValid == 1) {

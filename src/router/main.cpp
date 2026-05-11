@@ -49,10 +49,9 @@ void setup() {
     Serial.println(F("Inicjalizacja węzła router"));
 #endif
 
-    clearTx();
-    clearRx();
-
+    clearRx(); clearTx();
     SETUP_LORA;
+
     LoRa.onCadDone(onCadDone);
     LoRa.onReceive(onRxDone);
     LoRa.receive(); // Zaczynamy od nasłuchu
