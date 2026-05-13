@@ -3,6 +3,7 @@
 
 /* Defining DEBUG makro enables additional verbouse output in nodes */
 #define DEBUG
+#define SKIP_CAD
 #define BEGIN_DEBUG Serial.println(F("########## BEGIN DEBUG ##########"))
 #define END_DEBUG Serial.println(F("########## END DEBUG ##########"))
 

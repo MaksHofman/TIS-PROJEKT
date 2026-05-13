@@ -8,6 +8,7 @@
 #include "aggregator/node_activity.h"
 
 #include "aggregator/identity.h"
+#include "api/Common.h"
 
 // Bufor nadawczy i odbiorczy
 byte rxBuff[BUFF_SIZE], txBuff[BUFF_SIZE];
@@ -77,6 +78,7 @@ void loop() {
     if (millis() - lastActivityPrint < ACTIVITY_TIMEOUT)
         goto skipActivity;
 
+    lastActivityPrint = millis();
     Serial.println(F("########## POCZATEK AKTYWNE WEZLY ##########"));
     if (activeNodes == 0)
         Serial.println(F("Brak aktywnych wezlow, czy w sieci dziala co najmniej 1 sensor?"));
@@ -252,9 +254,14 @@ void loop() {
             break;
         }
         case STATE_WAIT_RANDOM: {
-            if (millis() - waitStartTime >= waitDuration)
+            if (millis() - waitStartTime >= waitDuration) {
+#ifndef SKIP_CAD
                 currentState = STATE_DO_CAD; // Po odczekaniu, spróbuj ponownie zbadać eter
-
+#endif
+#ifdef SKIP_CAD
+                currentState = STATE_TRANSMIT;
+#endif
+            }
             break;
         }
         case STATE_TRANSMIT: {

@@ -175,7 +175,12 @@ void loop() {
             break;
         case STATE_WAIT_RANDOM:
             if (millis() - waitStartTime >= waitDuration) {
+#ifndef SKIP_CAD
                 currentState = STATE_DO_CAD; // Po odczekaniu, spróbuj ponownie zbadać eter
+#endif
+#ifdef SKIP_CAD
+                currentState = STATE_TRANSMIT;
+#endif
             }
 
             break;

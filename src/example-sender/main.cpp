@@ -6,10 +6,10 @@
 int counter = 0;
 
 void setup() {
-
+    
+#ifdef DEBUG
     Serial.begin(115200);
     while (!Serial);
-#ifdef DEBUG
     Serial.println("LoRa Sender");
 #endif
 
