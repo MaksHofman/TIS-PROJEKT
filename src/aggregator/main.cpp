@@ -62,8 +62,6 @@ void setup() {
     clearRx(); clearTx();
     SETUP_LORA;
 
-    LoRa.onCadDone(onCadDone);
-    LoRa.onReceive(onRxDone);
     LoRa.receive(); // Zaczynamy od nasłuchu
     SETUP_LED;
 
@@ -103,11 +101,9 @@ void loop() {
     switch (currentState) {
         case STATE_IDLE: {
             // odebraliśmy wiadomość, trzeba to ogarnąć
-            if (flagPacketReceived) {
-                lastReceiveTime = millis();
-                flagPacketReceived = false;
+            if ((currentPacketSize = LoRa.parsePacket()))
                 currentState = STATE_PROCESS_PACKET;
-            }
+            
             // Serial.print(F("\b\b\b\b\b"));
             break;
         }
@@ -151,7 +147,7 @@ void loop() {
             }
             // Koniec standardowej walidacji
             // Na tym etapie można zamrugać diodą
-            
+            add_blinks(1);
 
             // Wiadomość to pomiar, więc wyświetlamy wszystko
             if (GET_TYPE(rxBuff) == MSG_T_MEAS_RTT) {
