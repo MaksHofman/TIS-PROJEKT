@@ -32,6 +32,16 @@ uint8_t readColor(uint8_t color) {
     return maxVals[color] ? (((255 - mapped) * 255) / maxVals[color]) : (255 - mapped);
 }
 
+void setupColorSensor() {
+    pinMode(S0, OUTPUT);
+    pinMode(S1, OUTPUT);
+    pinMode(S2, OUTPUT);
+    pinMode(S3, OUTPUT);
+    pinMode(OUT_PIN, INPUT);
+    digitalWrite(S0, HIGH);
+    digitalWrite(S1, LOW);
+}
+
 void calibrateColor(uint8_t color) {
     // show user the color to calibrate
     setRgbLedColor(color);

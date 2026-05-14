@@ -19,7 +19,6 @@ NodeState currentState = STATE_IDLE;
 
 // Zmienne do nieblokującego czekania
 unsigned long lastReceiveTime = 0;
-
 unsigned long lastReadTime = 0;
 
 void setup() {
@@ -27,25 +26,18 @@ void setup() {
     Serial.begin(115200);
 #endif
     // Sensor kolorów
-    pinMode(S0, OUTPUT);
-    pinMode(S1, OUTPUT);
-    pinMode(S2, OUTPUT);
-    pinMode(S3, OUTPUT);
-    pinMode(OUT_PIN, INPUT);
-    digitalWrite(S0, HIGH);
-    digitalWrite(S1, LOW);
-
+    setupColorSensor();
     calibrateColorSensor();
 
-    // Koniec sensora kolorów
+    // sygnalizacja
+    SETUP_LED;
 
     // Czyścimy bufory
     clearRx(); clearTx();
     SETUP_LORA;
 
-    LoRa.receive(); // Zaczynamy od nasłuchu
-    SETUP_LED;
-
+    // Zaczynamy od nasłuchu
+    LoRa.receive();
 }
 
 void loop() {
@@ -54,12 +46,12 @@ void loop() {
 
     switch (currentState) {
         case STATE_IDLE:
-            // odebraliśmy wiadomość, trzeba to ogarnąć
             if ((currentPacketSize = receive())) {
+                // odebraliśmy wiadomość, trzeba to ogarnąć
                 lastReceiveTime = millis();
                 currentState = STATE_PROCESS_PACKET;
             } else if (millis() - lastReadTime >= READ_TIMEOUT) {
-                // Trzeba nadać pomiar
+                // dawno nie wysyłaliśmy wiadomości, trzeba to zrobić
                 prepRead();
                 lastReadTime = millis();
                 currentState = STATE_TRANSMIT;

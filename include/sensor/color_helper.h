@@ -3,6 +3,8 @@
 
 uint8_t readColor(uint8_t color);
 
+void setupColorSensor();
+
 void calibrateColorSensor();
 
 // TODO: make enum
