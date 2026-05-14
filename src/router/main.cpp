@@ -130,7 +130,7 @@ void loop() {
         case STATE_TRANSMIT:
 #ifdef DEBUG
             BEGIN_DEBUG;
-            Serial.println(F("Eter wolny. Nadawanie..."));
+            Serial.println(F("Nadawanie..."));
             END_DEBUG;
 #endif
             // send() zajmuje się LoRa.idle(), time-slotem, nadaniem i LoRa.receive()
