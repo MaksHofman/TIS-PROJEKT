@@ -68,7 +68,7 @@ void loop() {
         case STATE_PROCESS_PACKET: {
             // Sprawdzamy co nam wpadło
             uint8_t isValid = validateMsg(rxBuff, currentPacketSize);
-            if (isValid == 1) {
+            if (isValid == MSG_STATE_TOO_SHORT) {
 #ifdef DEBUG
                 BEGIN_DEBUG;
                 Serial.print(F("Otrzymano za krotka wiadomosc, dlugosc: "));
@@ -77,7 +77,7 @@ void loop() {
 #endif
                 currentState = STATE_IDLE;
                 break;
-            } else if (isValid == 2) {
+            } else if (isValid == MSG_STATE_INVALID) {
 #ifdef DEBUG
                 BEGIN_DEBUG;
                 Serial.println(F("Otrzymano wiadomosc o nieznanym formacie"));
