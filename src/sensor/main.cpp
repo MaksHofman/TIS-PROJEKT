@@ -90,9 +90,7 @@ void loop() {
                 break;
             }
             // Tutaj już wyczerpaliśmy wszystkie opcje i trzeba odpowiedzieć
-            add_blinks(BLINKS_RECEIVE);
             prepMeasResp(currentPacketSize, lastReceiveTime);
-
             currentState = STATE_TRANSMIT;
 
             break;
