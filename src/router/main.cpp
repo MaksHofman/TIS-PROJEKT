@@ -2,46 +2,18 @@
 #include <LoRa.h>
 #include "!common/config.h"
 #include "!common/lora_init.h"
-#include "router/main.h"
 #include "!common/proto.h"
 #include "!common/proto_helper.h"
 #include "!common/led_helper.h"
+#include "!common/lora.h"
+#include "!common/state.h"
 
 #define MY_ID W1_ID
 
 byte rxBuff[BUFF_SIZE], txBuff[BUFF_SIZE];
 int currentPacketSize = 0;
 
-// Flagi dla przerwań
-volatile bool flagPacketReceived = false;
-volatile bool flagCadDone = false;
-volatile bool flagCadSignalDetected = false;
-
-// Definicja stanów maszyny
-enum RouterState {
-    STATE_IDLE,             // Nasłuchuje (nic się nie dzieje)
-    STATE_PROCESS_PACKET,   // Analizuje to, co przyszło
-    STATE_DO_CAD,           // Zleca skanowanie eteru (Listen Before Talk)
-    STATE_WAIT_CAD,         // Czeka na wynik skanowania
-    STATE_WAIT_RANDOM,      // Eter zajęty - czeka losowy czas
-    STATE_TRANSMIT          // Eter wolny - nadaje
-};
-
-RouterState currentState = STATE_IDLE;
-
-// Zmienne do nieblokującego czekania
-unsigned long waitStartTime = 0;
-uint8_t waitDuration = 0;
-
-void onRxDone(int packetSize) {
-    currentPacketSize = packetSize;
-    flagPacketReceived = true; // Zgłoś do loop(), że jest paczka
-}
-
-void onCadDone(boolean signal) {
-    flagCadSignalDetected = signal;
-    flagCadDone = true; // Zgłoś do loop(), że skanowanie zakończone
-}
+NodeState currentState = STATE_IDLE;
 
 void setup() {
 #ifdef DEBUG
@@ -52,8 +24,6 @@ void setup() {
     clearRx(); clearTx();
     SETUP_LORA;
 
-    LoRa.onCadDone(onCadDone);
-    LoRa.onReceive(onRxDone);
     LoRa.receive(); // Zaczynamy od nasłuchu
     SETUP_LED;
 }
@@ -83,7 +53,7 @@ void loop() {
                 Serial.println(valStatus == 1 ? F("Za krotka wiadomosc") : F("Nieznany protokol"));
                 END_DEBUG;
 #endif
-                currentState = STATE_IDLE; 
+                currentState = STATE_IDLE;
                 break; // Kończymy ten case natychmiast!
             }
 
@@ -109,10 +79,7 @@ void loop() {
                 memcpy(txBuff, rxBuff, currentPacketSize);
                 SET_NHOP(txBuff, (GET_NHOP(txBuff) - 1));
 
-                // Losowe opóźnienie przed CAD
-                waitDuration = LoRa.random();
-                waitStartTime = millis();
-                currentState = STATE_WAIT_RANDOM;
+                currentState = STATE_TRANSMIT;
                 break;
             } 
             
@@ -153,48 +120,9 @@ void loop() {
             SET_HOP(txBuff, GET_NHOP(txBuff), MY_ID);
             SET_SYS_CODE(txBuff, currentPacketSize, SYS_CODE);
 
-            // Losowe opóźnienie przed CAD
-            waitDuration = LoRa.random();
-            waitStartTime = millis();
-            currentState = STATE_WAIT_RANDOM;
+            currentState = STATE_TRANSMIT;
             break;
         }
-        case STATE_DO_CAD:
-            // Zlecamy zbadanie kanału i natychmiast wychodzimy ze stanu
-            flagCadDone = false;
-            currentState = STATE_WAIT_CAD;
-            LoRa.channelActivityDetection();
-            break;
-
-        case STATE_WAIT_CAD:
-            // Czekamy, aż przerwanie onCadDone przestawi flagę
-            if (flagCadDone) {
-                flagCadDone = false;
-                if (flagCadSignalDetected) {
-#ifdef DEBUG
-                    BEGIN_DEBUG;
-                    Serial.println(F("Eter zajety. Czekam losowy czas..."));
-                    END_DEBUG;
-#endif
-                    waitDuration = LoRa.random();
-                    waitStartTime = millis();
-                    currentState = STATE_WAIT_RANDOM;
-                } else {
-                    currentState = STATE_TRANSMIT;
-                }
-            }
-            break;
-
-        case STATE_WAIT_RANDOM:
-            if (millis() - waitStartTime >= waitDuration) {
-#ifndef SKIP_CAD
-                currentState = STATE_DO_CAD; // Po odczekaniu, spróbuj ponownie zbadać eter
-#endif
-#ifdef SKIP_CAD
-                currentState = STATE_TRANSMIT;
-#endif
-            }
-            break;
 
         case STATE_TRANSMIT:
 #ifdef DEBUG

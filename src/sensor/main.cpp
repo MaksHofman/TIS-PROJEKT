@@ -5,6 +5,9 @@
 #include "!common/proto_helper.h"
 #include "!common/proto.h"
 #include "!common/led_helper.h"
+#include "!common/lora.h"
+#include "!common/state.h"
+#include "sensor/identity.h"
 #include "sensor/color_helper.h"
 #include "sensor/msg_helper.h"
 
@@ -12,39 +15,12 @@
 byte rxBuff[BUFF_SIZE], txBuff[BUFF_SIZE];
 int currentPacketSize = 0;
 
-// Flagi dla przerwań
-volatile bool flagPacketReceived = false;
-volatile bool flagCadDone = false;
-volatile bool flagCadSignalDetected = false;
-
-// Definicja stanów naszej maszyny
-enum SensorState {
-    STATE_IDLE,             // Nasłuchuje (nic się nie dzieje)
-    STATE_PROCESS_PACKET,   // Analizuje to, co przyszło
-    STATE_DO_CAD,           // Zleca skanowanie eteru (Listen Before Talk)
-    STATE_WAIT_CAD,         // Czeka na wynik skanowania
-    STATE_WAIT_RANDOM,      // Eter zajęty - czeka losowy czas
-    STATE_TRANSMIT          // Eter wolny - nadaje
-};
-
-SensorState currentState = STATE_IDLE;
+NodeState currentState = STATE_IDLE;
 
 // Zmienne do nieblokującego czekania
-unsigned long waitStartTime = 0;
-uint8_t waitDuration = 0;
 unsigned long lastReceiveTime = 0;
 
 unsigned long lastReadTime = 0;
-
-void onRxDone(int packetSize) {
-    currentPacketSize = packetSize;
-    flagPacketReceived = true; // Zgłoś do loop(), że jest paczka
-}
-
-void onCadDone(boolean signal) {
-    flagCadSignalDetected = signal;
-    flagCadDone = true; // Zgłoś do loop(), że skanowanie zakończone
-}
 
 void setup() {
 #ifdef DEBUG
@@ -67,8 +43,6 @@ void setup() {
     clearRx(); clearTx();
     SETUP_LORA;
 
-    LoRa.onCadDone(onCadDone);
-    LoRa.onReceive(onRxDone);
     LoRa.receive(); // Zaczynamy od nasłuchu
     SETUP_LED;
 
@@ -134,56 +108,10 @@ void loop() {
             add_blinks(1);
             prepMeasResp(currentPacketSize, lastReceiveTime);
 
-            // Losowe opóźnienie przed CAD
-            waitDuration = LoRa.random();
-            waitStartTime = millis();
-            currentState = STATE_WAIT_RANDOM;
-
-            break;
-        }
-        case STATE_DO_CAD:
-            // Zlecamy zbadanie kanału i natychmiast wychodzimy ze stanu
-            flagCadDone = false;
-            currentState = STATE_WAIT_CAD;
-            LoRa.channelActivityDetection();
-
-            break;
-        case STATE_WAIT_CAD:
-            // Jeszcze się nie skończyło CAD
-            if (!flagCadDone)
-                break;
-
-            // Skończyło się CAD
-            flagCadDone = false;
-
-            // coś akurat nadaje
-            if (flagCadSignalDetected) {
-#ifdef DEBUG
-                BEGIN_DEBUG;
-                Serial.println(F("Eter zajety. Czekam losowy czas..."));
-                END_DEBUG;
-#endif
-                waitDuration = LoRa.random();
-                waitStartTime = millis();
-                currentState = STATE_WAIT_RANDOM;
-                break;
-            }
-
-            // Nic nie nadaje, możemy nadawać
             currentState = STATE_TRANSMIT;
 
             break;
-        case STATE_WAIT_RANDOM:
-            if (millis() - waitStartTime >= waitDuration) {
-#ifndef SKIP_CAD
-                currentState = STATE_DO_CAD; // Po odczekaniu, spróbuj ponownie zbadać eter
-#endif
-#ifdef SKIP_CAD
-                currentState = STATE_TRANSMIT;
-#endif
-            }
-
-            break;
+        }
 
         case STATE_TRANSMIT:
 #ifdef DEBUG
