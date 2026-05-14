@@ -23,6 +23,9 @@ unsigned long lastActivityPrint = 0;
 uint8_t activeNodes = 0;
 unsigned long lastSeen[8];
 
+// time slot sync
+unsigned long lastTimeSlotSync = 0;
+
 // A przechowajmy sobie timestamp1 z 10 wiadomości,
 // żeby printować tylko tą pierwszą i sprawdzać czas propagacji tylko tej pierwszej
 unsigned long seenMsgs[MSGS_TO_REMEMBER];
@@ -71,17 +74,27 @@ void loop() {
     skipActivity:
     switch (currentState) {
         case STATE_IDLE: {
+            if (millis() - lastTimeSlotSync > EPOCH_TIME) {
+                clearTx();
+                SET_SRC(txBuff, W0_ID);
+                SET_TYPE(txBuff, MSG_T_READ);
+                SET_ROUTING(txBuff, 0);
+                LoRa.beginPacket();
+                LoRa.write(txBuff, 1);
+                LoRa.endPacket();
+                LoRa.receive();
+                lastTimeSlotSync = millis();
+            }
+
             // odebraliśmy wiadomość, trzeba to ogarnąć
-            if ((currentPacketSize = LoRa.parsePacket()))
+            if ((currentPacketSize = receive()))
                 currentState = STATE_PROCESS_PACKET;
-            
+
             // Serial.print(F("\b\b\b\b\b"));
             break;
         }
         case STATE_PROCESS_PACKET: {
-            // 1. Odczyt danych z radia po SPI
-            clearRx();
-            LoRa.readBytes(rxBuff, currentPacketSize);
+            // receive() już odczytał dane do rxBuff i wyczyścił bufor
 
             uint8_t isValid = validateMsg(rxBuff, currentPacketSize);
             // Standardowa walidacja, czy to w ogóle nasze
@@ -118,7 +131,7 @@ void loop() {
             }
             // Koniec standardowej walidacji
             // Na tym etapie można zamrugać diodą
-            add_blinks(1);
+            add_blinks(BLINKS_RECEIVE);
 
             // Wiadomość to pomiar, więc wyświetlamy wszystko
             if (GET_TYPE(rxBuff) == MSG_T_MEAS_RTT) {
@@ -162,7 +175,7 @@ void loop() {
                 currentState = STATE_IDLE;
                 break;
             }
-            
+
 
 #ifdef DEBUG
             BEGIN_DEBUG;
@@ -199,20 +212,14 @@ void loop() {
             Serial.println(F("Eter wolny. Nadawanie..."));
             END_DEBUG;
 #endif
-            // WARNING: nie wiem, czy przypadkiem tu nie trzeba dać LoRa.idle();
+            // send() zajmuje się LoRa.idle(), time-slotem, nadaniem i LoRa.receive()
             // dodajemy przed samym nadaniem pomiaru timestamp1
             if (GET_TYPE(txBuff) == MSG_T_READ)
                 SET_TIMESTAMP1(txBuff, millis());
 
-            LoRa.beginPacket();
-            LoRa.write(txBuff, GET_LEN(txBuff));    // tutaj długość powinna być poprawnie wyliczona niezależnie od typu
-            LoRa.endPacket();
-            // ^ to endPacket() jest blokujące, więc teraz na spokojnie można wyczyścić bufor nadawczy
+            send(txBuff, GET_LEN(txBuff), MY_ID);
             clearTx();
-            
-            // Nasłuchiwanie
-            LoRa.receive();
-            add_blinks(2);
+
             currentState = STATE_IDLE;
             break;
         }

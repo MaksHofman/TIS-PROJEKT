@@ -55,24 +55,17 @@ void loop() {
     switch (currentState) {
         case STATE_IDLE:
             // odebraliśmy wiadomość, trzeba to ogarnąć
-            if (flagPacketReceived) {
+            if ((currentPacketSize = receive())) {
                 lastReceiveTime = millis();
-                flagPacketReceived = false;
                 currentState = STATE_PROCESS_PACKET;
             } else if (millis() - lastReadTime >= READ_TIMEOUT) {
                 // Trzeba nadać pomiar
                 prepRead();
-                // Losowe opóźnienie przed CAD
-                waitDuration = LoRa.random();
-                waitStartTime = millis();
-                currentState = STATE_WAIT_RANDOM;
+                lastReadTime = millis();
+                currentState = STATE_TRANSMIT;
             }
             break;
         case STATE_PROCESS_PACKET: {
-            // 1. Odczyt danych z radia po SPI
-            clearRx();
-            LoRa.readBytes(rxBuff, currentPacketSize);
-
             // Sprawdzamy co nam wpadło
             uint8_t isValid = validateMsg(rxBuff, currentPacketSize);
             if (isValid == 1) {
@@ -105,7 +98,7 @@ void loop() {
                 break;
             }
             // Tutaj już wyczerpaliśmy wszystkie opcje i trzeba odpowiedzieć
-            add_blinks(1);
+            add_blinks(BLINKS_RECEIVE);
             prepMeasResp(currentPacketSize, lastReceiveTime);
 
             currentState = STATE_TRANSMIT;
@@ -119,20 +112,14 @@ void loop() {
             Serial.println(F("Eter wolny. Nadawanie..."));
             END_DEBUG;
 #endif
-            // WARNING: nie wiem, czy przypadkiem tu nie trzeba dać LoRa.idle();
+            // send() zajmuje się LoRa.idle(), time-slotem, nadaniem i LoRa.receive()
             // dodajemy przed samym nadaniem pomiaru timestamp1
             if (GET_TYPE(txBuff) == MSG_T_READ)
                 SET_TIMESTAMP1(txBuff, millis());
 
-            LoRa.beginPacket();
-            LoRa.write(txBuff, GET_LEN(txBuff));    // tutaj długość powinna być poprawnie wyliczona niezależnie od typu
-            LoRa.endPacket();
-            // ^ to endPacket() jest blokujące, więc teraz na spokojnie można wyczyścić bufor nadawczy
+            send(txBuff, GET_LEN(txBuff), MY_ID);
             clearTx();
 
-            // Nasłuchiwanie
-            LoRa.receive();
-            add_blinks(2);
             currentState = STATE_IDLE;
 
             break;

@@ -34,16 +34,17 @@ void loop() {
     switch (currentState) {
 
         case STATE_IDLE:
-            if (flagPacketReceived) {
-                flagPacketReceived = false;
+        if ((currentPacketSize = receive()))
                 currentState = STATE_PROCESS_PACKET;
-            }
-            break;
+        break;
 
         case STATE_PROCESS_PACKET: {
-            // 1. Odczyt danych z radia po SPI
-            clearRx();
-            LoRa.readBytes(rxBuff, currentPacketSize);
+            // Sync beacons i inne zbyt krótkie pakiety — ignoruj po cichu
+            // TODO: zamiast tego okropieństwa można zwrócić albo 0/-1 z receive() czy np. zwracać typ wiadomości, może po prostu struct/ref-a do structa?
+            if (currentPacketSize < _MIN_READ_LEN) {
+                currentState = STATE_IDLE;
+                break;
+            }
 
             // 2. Walidacja z "Early Exit" (zamiast zagnieżdżania)
             int valStatus = validateMsg(rxBuff, currentPacketSize);
@@ -68,26 +69,28 @@ void loop() {
                     currentState = STATE_IDLE;
                     break;
                 }
-                
+
                 // Przepisanie pakietu, bo idzie przez nas
 #ifdef DEBUG
                 BEGIN_DEBUG;
                 Serial.println(F("Kierowane: przez nas. Przesylam dalej."));
                 END_DEBUG;
 #endif
-                add_blinks(1);
+                add_blinks(BLINKS_RECEIVE);
                 memcpy(txBuff, rxBuff, currentPacketSize);
                 SET_NHOP(txBuff, (GET_NHOP(txBuff) - 1));
 
                 currentState = STATE_TRANSMIT;
                 break;
-            } 
-            
+            }
+
             // 4. ROUTING ROZSIEWCZY (jeśli kod dotarł tu, to na pewno nie jest kierowany)
             if (GET_NHOP(rxBuff) >= MAX_NHOPS) {
 #ifdef DEBUG
                 BEGIN_DEBUG;
-                Serial.println(F("Zbyt duza ilosc przeskokow (TTL). Odrzucam."));
+                Serial.print(F("Zbyt duza ilosc przeskokow (TTL): "));
+                Serial.print(GET_NHOP(rxBuff));
+                Serial.println(". Odrzucam.");
                 END_DEBUG;
 #endif
                 currentState = STATE_IDLE;
@@ -111,10 +114,10 @@ void loop() {
 #endif
                 currentState = STATE_IDLE;
                 break;
-            } 
+            }
 
             // Jeśli przeszedł wszystkie testy – nadajemy
-            add_blinks(1);
+            add_blinks(BLINKS_RECEIVE);
             memcpy(txBuff, rxBuff, currentPacketSize);
             SET_NHOP(txBuff, (GET_NHOP(txBuff) + 1));
             SET_HOP(txBuff, GET_NHOP(txBuff), MY_ID);
@@ -130,16 +133,10 @@ void loop() {
             Serial.println(F("Eter wolny. Nadawanie..."));
             END_DEBUG;
 #endif
-            // WARNING: nie wiem, czy przypadkiem tu nie trzeba dać LoRa.idle();
-            LoRa.beginPacket();
-            LoRa.write(txBuff, currentPacketSize);
-            LoRa.endPacket();
-            // ^ to endPacket() jest blokujące, więc teraz na spokojnie można wyczyścić bufor nadawczy
+            // send() zajmuje się LoRa.idle(), time-slotem, nadaniem i LoRa.receive()
+            send(txBuff, currentPacketSize, MY_ID);
             clearTx();
-            
-            // Nasłuchiwanie
-            LoRa.receive();
-            add_blinks(2);
+
             currentState = STATE_IDLE;
             break;
     }

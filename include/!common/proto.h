@@ -38,6 +38,11 @@
 #define MSG_T_READ 0x0
 #define MSG_T_MEAS_RTT 0x1
 
+// czas trwania wiadomości 300ms
+#define MSG_TIME 300
+// czas trwania bloku ze wszystkimi slotami (max id = 8 -> *9)
+#define EPOCH_TIME 300 * 9
+
 // Gettery
 #define GET_SRC(MSG)                ( *(_GET_PTR8((MSG),0)) >> 4 )
 #define GET_RES(MSG)                ( (*(_GET_PTR8((MSG),0)) >> 2) & 0b11 )
@@ -92,7 +97,7 @@
 #define SET_TYPE(MSG,TYPE)          do { \
                                         uint8_t* _p = _GET_PTR8((MSG),0); \
                                         *_p = (*_p & 0xfd) | (((TYPE) & 0x01) << 1); \
-                                    } while(0)                                                    
+                                    } while(0)
 
 #define SET_ROUTING(MSG,ROUTING)    do { \
                                         uint8_t* _p = _GET_PTR8((MSG),0); \
@@ -108,12 +113,12 @@
                                         uint8_t* _p = _GET_PTR8((MSG),_G_OFFSET); \
                                         *_p = (G) & 0xff; \
                                     } while(0)
-                                    
+
 #define SET_B(MSG,B)                do { \
                                         uint8_t* _p = _GET_PTR8((MSG),_B_OFFSET); \
                                         *_p = (B) & 0xff; \
                                     } while(0)
-                                    
+
 #define SET_TIMESTAMP1(MSG,TIME)    do { \
                                         uint8_t* _p = _GET_PTR8((MSG),_TIMESTAMP1_OFFSET); \
                                         uint32_t _t = (TIME); \
@@ -149,6 +154,6 @@
 #define SET_SYS_CODE(MSG,LEN,CODE)      do { \
                                         uint8_t* _p = _GET_PTR8((MSG),((LEN)-1)); \
                                         *_p = (CODE) & 0xff; \
-                                    } while(0)                                    
-                                                
+                                    } while(0)
+
 #endif
