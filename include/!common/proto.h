@@ -1,159 +1,90 @@
 #ifndef __PROTO_H__
 #define __PROTO_H__
 
-#define _GET_PTR8(MSG,OFFSET) (((uint8_t*)(MSG)) + (OFFSET))
+#include <Arduino.h>
 
-// Minimalne długości
-#define _MIN_READ_LEN 10
-#define _MIN_MEAS_LEN 14
+// between 1 and 5 hops
+#define MAX_HOPS 5
 
-// Offsety
-#define _R_OFFSET 1
-#define _G_OFFSET 2
-#define _B_OFFSET 3
-#define _TIMESTAMP1_OFFSET 4
-#define _TIMESTAMP2_OFFSET 8
-#define _READ_NHOP_OFFSET 8
-#define _MEAS_NHOP_OFFSET 12
+enum Node : uint8_t {
+    AGGREGATOR,
+    W1,
+    W2,
+    W3,
+    W4,
+    W5,
+    W6,
+    SENSOR
+};
 
-// Do weryfikowania, czy to. nasze wiadomości
-#define RES 0
-#define SYS_CODE 0b10101010
+// number of nodes present in the network
+#define NUM_NODES 8
 
-// Identyfikatory węzłów < 8:
-#define W0_ID 0
-#define W1_ID 1
-#define W2_ID 2
-#define W3_ID 3
-#define W4_ID 4
-#define W5_ID 5
+enum PacketType : uint8_t {
+    /**
+     * Message with color measurement values. Sent from sensor only.
+     */
+    COLOR_MEAS,
 
-// Identyfikatory sensorów >= 8
-#define S1_ID 8
+    // TODO: unused? remove?
+    /**
+     * Time synchronization message. While it's source can only be the aggregator node,
+     * it can be forwarded by any router and thus received from either an aggreagator
+     * or router node.
+     *
+     * Contains no data.
+     */
+    TIME_SYNC,
 
-#define IS_SENSOR(ID)               (((ID) & 0b1000) >> 3)
-#define SENSOR_ID(ID)               (((ID) & 0b0111) + 1)
+    /**
+     * Propagation time measurement request.
+     *
+     * Contains no data.
+     */
+    TRACE_REQ,
 
-// Typy wiadomości
-#define MSG_T_READ 0x0
-#define MSG_T_MEAS_RTT 0x1
+    /**
+     * Propagation time measurement response.
+     */
+    TRACE_RES
+};
 
-// czas trwania wiadomości 300ms
-#define MSG_TIME 300
-// czas trwania bloku ze wszystkimi slotami (max id = 8 -> *9)
-#define EPOCH_TIME 300 * 9
+typedef struct __attribute__((packed)) {
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
+} DataColorMeasurement;
 
-// Gettery
-#define GET_SRC(MSG)                ( *(_GET_PTR8((MSG),0)) >> 4 )
-#define GET_RES(MSG)                ( (*(_GET_PTR8((MSG),0)) >> 2) & 0b11 )
-#define GET_TYPE(MSG)               ( (*(_GET_PTR8((MSG),0)) >> 1) & 0b1 )
-#define GET_ROUTING(MSG)            ( *(_GET_PTR8((MSG),0)) & 0b1 )
+typedef struct __attribute__((packed)) {
+    uint16_t timestamp;
+} DataTraceResponse;
 
-#define GET_R(MSG)                  ( *(_GET_PTR8((MSG),_R_OFFSET)) )
-#define GET_G(MSG)                  ( *(_GET_PTR8((MSG),_G_OFFSET)) )
-#define GET_B(MSG)                  ( *(_GET_PTR8((MSG),_B_OFFSET)) )
+typedef struct __attribute__((packed)) {
+    // from/to who
+    Node src : 3;
+    Node dst : 3;
 
-#define GET_TIMESTAMP1(MSG) ( (uint32_t)(*_GET_PTR8((MSG),_TIMESTAMP1_OFFSET))       | \
-                            ( (uint32_t)(*_GET_PTR8((MSG),_TIMESTAMP1_OFFSET + 1)) << 8)  | \
-                            ( (uint32_t)(*_GET_PTR8((MSG),_TIMESTAMP1_OFFSET + 2)) << 16) | \
-                            ( (uint32_t)(*_GET_PTR8((MSG),_TIMESTAMP1_OFFSET + 3)) << 24) )
+    // payload type and contents
+    PacketType type : 2;
+    union {
+        DataColorMeasurement colorMeasurement;
+        DataTraceResponse traceResponse;
+    } data;
 
-#define GET_TIMESTAMP2(MSG) ( (uint32_t)(*_GET_PTR8((MSG),_TIMESTAMP2_OFFSET))       | \
-                            ( (uint32_t)(*_GET_PTR8((MSG),_TIMESTAMP2_OFFSET + 1)) << 8)  | \
-                            ( (uint32_t)(*_GET_PTR8((MSG),_TIMESTAMP2_OFFSET + 2)) << 16) | \
-                            ( (uint32_t)(*_GET_PTR8((MSG),_TIMESTAMP2_OFFSET + 3)) << 24) )
+    // TODO: storing this in a different way should allow for using 2 bytes less per Packet
+    Node hops[MAX_HOPS];
+} Packet;
 
-#define GET_NHOP(MSG)               (GET_TYPE((MSG)) ?  (*_GET_PTR8((MSG),_MEAS_NHOP_OFFSET) >> 4) : \
-                                                        (*_GET_PTR8((MSG),_READ_NHOP_OFFSET) >> 4) )
+#define PACKET_SIZE sizeof(Packet)
 
-#define GET_SYS_CODE(MSG,MSG_LEN)   ( *(_GET_PTR8((MSG),((MSG_LEN) - 1))) )
+// TODO: recalculate
+#define MSG_TIME      300
+#define EPOCH_TIME    MSG_TIME * NUM_NODES
 
-// Do walidacji, że wiadomość pochodzi z naszego systemu
-#define MSG_VALID(MSG,MSG_LEN)      ( (GET_RES((MSG)) == RES) && (GET_SYS_CODE((MSG),(MSG_LEN)) == SYS_CODE) )
+void send(Packet* packet);
 
-// Do pobierania odpowiednich node_id (UWAGA node_id numerowane od 1 do MAX_HOPS)
-#define GET_HOP_NODE_ID(MSG,INDEX)  ( GET_TYPE(MSG) ? \
-                                                     (INDEX) & 0x1 ? (*(_GET_PTR8((MSG),(_MEAS_NHOP_OFFSET + (((uint8_t)(INDEX)) / 2)))) & 0x0f) : \
-                                                     ((*(_GET_PTR8((MSG),(_MEAS_NHOP_OFFSET + (((uint8_t)(INDEX)) / 2)))) >> 4 ) & 0x0f) \
-                                                    : \
-                                                     (INDEX) & 0x1 ? (*(_GET_PTR8((MSG),(_READ_NHOP_OFFSET + (((uint8_t)(INDEX)) / 2)))) & 0x0f) : \
-                                                     ((*(_GET_PTR8((MSG),(_READ_NHOP_OFFSET + (((uint8_t)(INDEX)) / 2)))) >> 4 ) & 0x0f))
+size_t receive(Packet* packet);
 
-// To makro jest trochę sketchy, bo może nie działać prawidłowo dla routingu kierowanego na routerach
-#define GET_LEN(MSG)                (GET_TYPE(MSG) ? (_MIN_MEAS_LEN + (uint8_t)(GET_NHOP(MSG) / 2)) : \
-                                                     (_MIN_READ_LEN + (uint8_t)(GET_NHOP(MSG) / 2)) )
-
-// Settery
-#define SET_SRC(MSG,SRC)            do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),0); \
-                                        *_p = (*_p & 0x0f) | (((SRC) & 0x0f) << 4); \
-                                    } while(0)
-
-#define SET_RES(MSG,RES)            do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),0); \
-                                        *_p = (*_p & 0xf3) | (((RES) & 0x03) << 2); \
-                                    } while(0)
-
-#define SET_TYPE(MSG,TYPE)          do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),0); \
-                                        *_p = (*_p & 0xfd) | (((TYPE) & 0x01) << 1); \
-                                    } while(0)
-
-#define SET_ROUTING(MSG,ROUTING)    do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),0); \
-                                        *_p = (*_p & 0xfe) | ((ROUTING) & 0x01); \
-                                    } while(0)
-
-#define SET_R(MSG,R)                do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),_R_OFFSET); \
-                                        *_p = (R) & 0xff; \
-                                    } while(0)
-
-#define SET_G(MSG,G)                do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),_G_OFFSET); \
-                                        *_p = (G) & 0xff; \
-                                    } while(0)
-
-#define SET_B(MSG,B)                do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),_B_OFFSET); \
-                                        *_p = (B) & 0xff; \
-                                    } while(0)
-
-#define SET_TIMESTAMP1(MSG,TIME)    do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),_TIMESTAMP1_OFFSET); \
-                                        uint32_t _t = (TIME); \
-                                        _p[0] = _t & 0xFF; \
-                                        _p[1] = (_t >> 8) & 0xFF; \
-                                        _p[2] = (_t >> 16) & 0xFF; \
-                                        _p[3] = (_t >> 24) & 0xFF; \
-                                    } while(0)
-
-#define SET_TIMESTAMP2(MSG,TIME)    do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),_TIMESTAMP2_OFFSET); \
-                                        uint32_t _t = (TIME); \
-                                        _p[0] = _t & 0xFF; \
-                                        _p[1] = (_t >> 8) & 0xFF; \
-                                        _p[2] = (_t >> 16) & 0xFF; \
-                                        _p[3] = (_t >> 24) & 0xFF; \
-                                    } while(0)
-
-#define SET_NHOP(MSG,NHOP)          do { \
-                                        uint8_t* _p = GET_TYPE(MSG) ? _GET_PTR8((MSG),_MEAS_NHOP_OFFSET) : \
-                                        _GET_PTR8((MSG),_READ_NHOP_OFFSET); \
-                                        *_p = (*_p & 0x0f) | (((NHOP) & 0x0f) << 4); \
-                                    } while(0)
-
-#define SET_HOP(MSG,INDEX,HOP)      do { \
-                                        uint8_t* _p = GET_TYPE(MSG) ? _GET_PTR8((MSG),_MEAS_NHOP_OFFSET) : \
-                                        _GET_PTR8((MSG),_READ_NHOP_OFFSET); \
-                                        _p += (uint8_t)((INDEX) / 2); \
-                                        *_p = (INDEX) & 0x1 ? ((*_p & 0xf0) | ((HOP) & 0x0f)) : \
-                                        ((*_p & 0x0f) | (((HOP) & 0x0f) << 4)); \
-                                    } while(0)
-
-#define SET_SYS_CODE(MSG,LEN,CODE)      do { \
-                                        uint8_t* _p = _GET_PTR8((MSG),((LEN)-1)); \
-                                        *_p = (CODE) & 0xff; \
-                                    } while(0)
+void setupLoRa();
 
 #endif

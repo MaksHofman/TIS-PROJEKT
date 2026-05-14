@@ -1,8 +1,12 @@
-#include <Arduino.h>
 #include "!common/led_helper.h"
 
 uint8_t to_blink = 0;
 unsigned long last_blink;
+
+void setupLed() {
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
+}
 
 void add_blinks(uint8_t to_add) {
     to_blink += 2 * to_add;

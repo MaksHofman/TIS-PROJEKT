@@ -1,118 +1,84 @@
-#include <Arduino.h>
-#include <LoRa.h>
 #include "!common/config.h"
-#include "!common/lora_init.h"
-#include "!common/proto_helper.h"
-#include "!common/proto.h"
 #include "!common/led_helper.h"
-#include "!common/lora.h"
+#include "!common/log.h"
+#include "!common/proto.h"
 #include "!common/state.h"
-#include "sensor/identity.h"
 #include "sensor/color_helper.h"
-#include "sensor/msg_helper.h"
 
-// Bufor nadawczy i odbiorczy
-byte rxBuff[BUFF_SIZE], txBuff[BUFF_SIZE];
-int currentPacketSize = 0;
+#define MY_ID NODE::SENSOR
 
-NodeState currentState = STATE_IDLE;
-
-// Zmienne do nieblokującego czekania
-unsigned long lastReceiveTime = 0;
-unsigned long lastReadTime = 0;
+enum class SensorState {
+    IDLE,
+    PROCESS_PACKET,
+    SEND_COLOR_MEASUREMENT,
+    RESPOND_TIME_TRACE
+};
+SensorState currentState = SensorState::IDLE;
+unsigned long lastColorSent = 0;
 
 void setup() {
-#ifdef DEBUG
-    Serial.begin(115200);
-#endif
-    // Sensor kolorów
+    BEGIN_DEBUG;
+
+    // setup color sensor
     setupColorSensor();
     calibrateColorSensor();
 
-    // sygnalizacja
-    SETUP_LED;
+    // setup builtin led
+    setupLed();
 
-    // Czyścimy bufory
-    clearRx(); clearTx();
-    SETUP_LORA;
-
-    // Zaczynamy od nasłuchu
-    LoRa.receive();
+    // setup LoRa
+    setupLoRa();
 }
 
 void loop() {
     // Mruganko
     blink();
 
+    Packet rxPacket;
+
     switch (currentState) {
-        case STATE_IDLE:
-            if ((currentPacketSize = receive())) {
-                // odebraliśmy wiadomość, trzeba to ogarnąć
-                lastReceiveTime = millis();
-                currentState = STATE_PROCESS_PACKET;
-            } else if (millis() - lastReadTime >= READ_TIMEOUT) {
-                // dawno nie wysyłaliśmy wiadomości, trzeba to zrobić
-                prepRead();
-                lastReadTime = millis();
-                currentState = STATE_TRANSMIT;
+        case SensorState::IDLE: {
+            // network is most important, so handle it first
+            if (receive(&rxPacket)) {
+                // got any packet
+                currentState = SensorState::PROCESS_PACKET;
+            } else if (millis() - lastColorSent > READ_TIMEOUT) {
+                // no packet and we haven't sent color in a while
+                currentState = SensorState::SEND_COLOR_MEASUREMENT;
             }
-            break;
-        case STATE_PROCESS_PACKET: {
-            // Sprawdzamy co nam wpadło
-            uint8_t isValid = validateMsg(rxBuff, currentPacketSize);
-            if (isValid == MSG_STATE_TOO_SHORT) {
-#ifdef DEBUG
-                BEGIN_DEBUG;
-                Serial.print(F("Otrzymano za krotka wiadomosc, dlugosc: "));
-                Serial.println(currentPacketSize);
-                END_DEBUG;
-#endif
-                currentState = STATE_IDLE;
-                break;
-            } else if (isValid == MSG_STATE_INVALID) {
-#ifdef DEBUG
-                BEGIN_DEBUG;
-                Serial.println(F("Otrzymano wiadomosc o nieznanym formacie"));
-                END_DEBUG;
-#endif
-                currentState = STATE_IDLE;
-                break;
-            }
-
-            // ok, tu wiadomość już jest z naszego systemu, ale trzeba sprawdzić, czy musimy odpowiadać
-            if(!doIHaveToRespond()) {
-#ifdef DEBUG
-                BEGIN_DEBUG;
-                Serial.println(F("Wiadomosc nie jest dla sensora"));
-                END_DEBUG;
-#endif
-                currentState = STATE_IDLE;
-                break;
-            }
-            // Tutaj już wyczerpaliśmy wszystkie opcje i trzeba odpowiedzieć
-            prepMeasResp(currentPacketSize, lastReceiveTime);
-            currentState = STATE_TRANSMIT;
-
             break;
         }
-
-        case STATE_TRANSMIT:
-#ifdef DEBUG
-            BEGIN_DEBUG;
-            Serial.println(F("Nadawanie..."));
-            END_DEBUG;
-#endif
-            // send() zajmuje się LoRa.idle(), time-slotem, nadaniem i LoRa.receive()
-            // dodajemy przed samym nadaniem pomiaru timestamp1
-            if (GET_TYPE(txBuff) == MSG_T_READ)
-                SET_TIMESTAMP1(txBuff, millis());
-
-            send(txBuff, GET_LEN(txBuff), MY_ID);
-            clearTx();
-
-            currentState = STATE_IDLE;
-
+        case SensorState::PROCESS_PACKET: {
+            if (rxPacket.type == PacketType::TRACE_REQ) {
+                currentState = SensorState::RESPOND_TIME_TRACE;
+            }
             break;
+        }
+        case SensorState::SEND_COLOR_MEASUREMENT: {
+            Packet packet {
+                .src = MY_ID,
+                .dst = Node::AGGREGATOR,
+                .type = PacketType::COLOR_MEAS,
+                .data.colorMeasurement = DataColorMeasurement {
+                    .red = readColor(COLOR_RED),
+                    .green = readColor(COLOR_GREEN),
+                    .blue = readColor(COLOR_BLUE),
+                }
+            };
+            send(&packet);
+            break;
+        }
+        case SensorState::RESPOND_TIME_TRACE: {
+            Packet packet {
+                .src = MY_ID,
+                .dst = Node::AGGREGATOR,
+                .type = PacketType::TRACE_RES,
+                .data.traceResponse = DataTraceResponse {
+                    .timestamp = static_cast<uint16_t>(millis())
+                }
+            };
+            send(&packet);
+            break;
+        }
     }
-
 }

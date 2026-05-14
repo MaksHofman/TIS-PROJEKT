@@ -6,8 +6,6 @@
 #undef DEBUG
 #define SKIP_CAD
 #define IGNORE_MEAS
-#define BEGIN_DEBUG Serial.println(F("########## BEGIN DEBUG ##########"))
-#define END_DEBUG Serial.println(F("########## END DEBUG ##########"))
 
 /*
  * LoRa settings:
