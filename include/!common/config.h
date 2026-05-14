@@ -3,7 +3,9 @@
 
 /* Defining DEBUG makro enables additional verbouse output in nodes */
 #define DEBUG
+#undef DEBUG
 #define SKIP_CAD
+#define IGNORE_MEAS
 #define BEGIN_DEBUG Serial.println(F("########## BEGIN DEBUG ##########"))
 #define END_DEBUG Serial.println(F("########## END DEBUG ##########"))
 
@@ -15,8 +17,8 @@
  * PREAMBLE_LENGTH: 6-65535 (default 8)
  * SYNC_WORD: differetiating between networks
  */
-#define LORA_FREQ 868E6
-#define SPREADING_FACTOR 7
+#define LORA_FREQ 868.3E6
+#define SPREADING_FACTOR 10
 #define SIGNAL_BANDWIDTH 125E3
 #define PREAMBLE_LANGTH 8
 #define SYNC_WORD 0x12

@@ -8,7 +8,7 @@
 #include "aggregator/node_activity.h"
 
 #include "aggregator/identity.h"
-#include "api/Common.h"
+#define DEBUG
 
 // Bufor nadawczy i odbiorczy
 byte rxBuff[BUFF_SIZE], txBuff[BUFF_SIZE];
@@ -48,6 +48,7 @@ unsigned long seenMsgs[MSGS_TO_REMEMBER];
 void onRxDone(int packetSize) {
     currentPacketSize = packetSize;
     flagPacketReceived = true; // Zgłoś do loop(), że jest paczka
+    add_blinks(1);
 }
 
 void onCadDone(boolean signal) {
@@ -107,6 +108,7 @@ void loop() {
                 flagPacketReceived = false;
                 currentState = STATE_PROCESS_PACKET;
             }
+            // Serial.print(F("\b\b\b\b\b"));
             break;
         }
         case STATE_PROCESS_PACKET: {
@@ -149,7 +151,7 @@ void loop() {
             }
             // Koniec standardowej walidacji
             // Na tym etapie można zamrugać diodą
-            add_blinks(1);
+            
 
             // Wiadomość to pomiar, więc wyświetlamy wszystko
             if (GET_TYPE(rxBuff) == MSG_T_MEAS_RTT) {
@@ -187,12 +189,13 @@ void loop() {
                 Serial.print(F("Juz widzielismy: "));
                 Serial.print(GET_TIMESTAMP1(rxBuff));
                 printPath(currentPacketSize);
+                Serial.println();
                 END_DEBUG;
 #endif
                 currentState = STATE_IDLE;
                 break;
             }
-            seeItNow();
+            
 
 #ifdef DEBUG
             BEGIN_DEBUG;
@@ -209,13 +212,17 @@ void loop() {
             Serial.println(GET_B(rxBuff), DEC);
             END_DEBUG;
 #endif
-
-            // i teraz otrzymaliśmy READ, więc trzeba odesłać do pomiaru czasu tą samą ścieżką
-            prepMeasResp(currentPacketSize);
+            if(!GET_NHOP(rxBuff)) {
+                // i teraz otrzymaliśmy READ, więc trzeba odesłać do pomiaru czasu tą samą ścieżką
+                currentState = STATE_IDLE;
+                break;
+            }
+        prepMeasResp(currentPacketSize);
 #ifdef IGNORE_MEAS
             currentState = STATE_IDLE;
             break;
 #endif
+            seeItNow();
             waitDuration = LoRa.random();
             waitStartTime = millis();
             currentState = STATE_WAIT_RANDOM;

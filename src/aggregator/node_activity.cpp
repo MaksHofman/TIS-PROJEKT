@@ -124,12 +124,13 @@ void printPath(uint8_t len) {
     Serial.print(F(", przez: "));
     for (int i = 1; i <= nhops_in_msg; i++) {
         Serial.print(F("W"));
-        Serial.print(GET_HOP_NODE_ID(rxBuff, i), DEC);
+        uint8_t hop = GET_HOP_NODE_ID(rxBuff, i);
+        Serial.print(hop, DEC);
         if (i != nhops_in_msg)
             Serial.print(F(", "));
         // przy okazji zaaktualizujmy kiedy je widzieliśmy
-        SET_ACTIVE(activeNodes, i, 1);
-        lastSeen[i - 1] = millis();
+        SET_ACTIVE(activeNodes, hop, 1);
+        lastSeen[hop - 1] = millis();
     }
 
 }
