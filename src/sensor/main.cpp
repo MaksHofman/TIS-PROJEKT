@@ -44,6 +44,7 @@ void loop() {
             } else if (millis() - lastColorSent > READ_TIMEOUT) {
                 // no packet and we haven't sent color in a while
                 currentState = SensorState::SEND_COLOR_MEASUREMENT;
+                lastColorSent = millis();
             }
             break;
         }
