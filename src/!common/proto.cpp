@@ -64,6 +64,8 @@ size_t receive(Packet *packet) {
     } else {
         Serial.print("WARN: Unexpected packet size: "); Serial.println(packetSize);
     }
+
+    return packetSize;
 }
 
 void setupLoRa() {
