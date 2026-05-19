@@ -26,16 +26,6 @@ enum PacketType : uint8_t {
      */
     COLOR_MEAS,
 
-    // TODO: unused? remove?
-    /**
-     * Time synchronization message. While it's source can only be the aggregator node,
-     * it can be forwarded by any router and thus received from either an aggreagator
-     * or router node.
-     *
-     * Contains no data.
-     */
-    TIME_SYNC,
-
     /**
      * Propagation time measurement request.
      *
