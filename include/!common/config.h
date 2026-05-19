@@ -12,7 +12,7 @@
 #define LORA_FREQ 868.3E6
 #define SPREADING_FACTOR 10
 #define SIGNAL_BANDWIDTH 125E3
-#define PREAMBLE_LANGTH 8
+#define PREAMBLE_LENGTH 8
 #define SYNC_WORD 0x12
 
 // TODO: move below to be sensor specific

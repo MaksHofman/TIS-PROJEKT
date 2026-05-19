@@ -72,7 +72,7 @@ void setupLoRa() {
     LoRa.begin(LORA_FREQ);
     LoRa.setSpreadingFactor(SPREADING_FACTOR);
     LoRa.setSignalBandwidth(SIGNAL_BANDWIDTH);
-    LoRa.setPreambleLength(PREAMBLE_LANGTH);
+    LoRa.setPreambleLength(PREAMBLE_LENGTH);
     LoRa.setSyncWord(SYNC_WORD);
     LoRa.enableCrc();
     LoRa.enableInvertIQ();
