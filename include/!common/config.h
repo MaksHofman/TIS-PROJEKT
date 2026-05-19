@@ -1,12 +1,6 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-/* Defining DEBUG makro enables additional verbouse output in nodes */
-#define DEBUG
-#undef DEBUG
-#define SKIP_CAD
-#define IGNORE_MEAS
-
 /*
  * LoRa settings:
  * LORA_FREQ: default 868E6 (kanały co ok. 200kHz 1% duty cycle; 869.525E6 - kanał 10% duty cycle i 500 mW)
@@ -21,13 +15,7 @@
 #define PREAMBLE_LANGTH 8
 #define SYNC_WORD 0x12
 
-/* 
- * Parametry protokołu
- */
-#define MAX_NHOPS 1
-#define BUFF_SIZE 22
-#define MSGS_TO_REMEMBER 10
-
+// TODO: move below to be sensor specific
 // Podłączenie sensora kolorów
 #define S0 2
 #define S1 3
