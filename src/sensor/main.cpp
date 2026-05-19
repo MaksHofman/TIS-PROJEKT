@@ -35,7 +35,6 @@ void loop() {
     blink();
 
     Packet rxPacket;
-
     switch (currentState) {
         case SensorState::IDLE: {
             // network is most important, so handle it first
@@ -59,10 +58,12 @@ void loop() {
                 .src = MY_ID,
                 .dst = Node::AGGREGATOR,
                 .type = PacketType::COLOR_MEAS,
-                .data.colorMeasurement = DataColorMeasurement {
-                    .red = readColor(COLOR_RED),
-                    .green = readColor(COLOR_GREEN),
-                    .blue = readColor(COLOR_BLUE),
+                .data = {
+                    .colorMeasurement = DataColorMeasurement {
+                        .red = readColor(COLOR_RED),
+                        .green = readColor(COLOR_GREEN),
+                        .blue = readColor(COLOR_BLUE),
+                    }
                 }
             };
             send(&packet);
@@ -73,8 +74,10 @@ void loop() {
                 .src = MY_ID,
                 .dst = Node::AGGREGATOR,
                 .type = PacketType::TRACE_RES,
-                .data.traceResponse = DataTraceResponse {
-                    .timestamp = static_cast<uint16_t>(millis())
+                .data = {
+                    .traceResponse = DataTraceResponse {
+                        .timestamp = static_cast<uint16_t>(millis())
+                    }
                 }
             };
             send(&packet);
