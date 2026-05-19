@@ -70,9 +70,10 @@ void loop() {
                     }
                 }
             };
-            send(&packet);
-
-            currentState = SensorState::IDLE;
+            // only return to IDLE on successful send
+            if (send(&packet)) {
+                currentState = SensorState::IDLE;
+            }
             break;
         }
         case SensorState::RESPOND_TIME_TRACE: {
@@ -86,9 +87,10 @@ void loop() {
                     }
                 }
             };
-            send(&packet);
-
-            currentState = SensorState::IDLE;
+            // only return to IDLE on successful
+            if (send(&packet)) {
+                currentState = SensorState::IDLE;
+            }
             break;
         }
     }
