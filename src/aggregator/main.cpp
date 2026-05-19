@@ -2,7 +2,7 @@
 #include "!common/log.h"
 #include "!common/proto.h"
 
-extern const Node MY_ID = Node::SENSOR;
+extern const Node MY_ID = Node::AGGREGATOR;
 
 #define TIME_TRACE_TIMEOUT 10000
 #define REPORT_TIMEOUT     2000
