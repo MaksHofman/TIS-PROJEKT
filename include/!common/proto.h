@@ -73,7 +73,7 @@ typedef struct __attribute__((packed)) {
 #define MSG_TIME      300
 #define EPOCH_TIME    (MSG_TIME * NUM_NODES)
 
-void send(Packet* packet);
+bool send(Packet* packet);
 
 size_t receive(Packet* packet);
 

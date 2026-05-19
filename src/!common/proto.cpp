@@ -7,17 +7,11 @@
 bool isSynced = false;
 unsigned long nextTimeSlot = 0;
 
-void send(Packet *packet) {
-    if (!isSynced) {
-        Serial.println("WARN: Not synced, dropping packet...");
-        return;
-    }
-
-    // now wait for our time slot
-    // for aggregator this will always be false, thus it will never wait
-    while (millis() < nextTimeSlot) {
-        // was no-op before, but now let's at least call blink
-        blink();
+bool send(Packet *packet) {
+    // not our time slot yet — bail out, caller will retry next loop
+    // (aggregator always goes through since nextTimeSlot starts at 0)
+    if (millis() < nextTimeSlot) {
+        return false;
     }
 
     add_blinks(BLINKS_SEND);
@@ -32,6 +26,8 @@ void send(Packet *packet) {
 
     // enable receive mode (since beginPacket() disables it)
     LoRa.receive();
+
+    return true;
 }
 
 unsigned long getOffsetToOurSlot(Node receivedSourceId) {
