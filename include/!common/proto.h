@@ -20,6 +20,8 @@ enum Node : uint8_t {
 // number of nodes present in the network
 #define NUM_NODES 8
 
+extern const Node MY_ID;
+
 enum PacketType : uint8_t {
     /**
      * Message with color measurement values. Sent from sensor only.

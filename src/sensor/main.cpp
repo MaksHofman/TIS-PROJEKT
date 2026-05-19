@@ -5,7 +5,7 @@
 #include "!common/state.h"
 #include "sensor/color_helper.h"
 
-#define MY_ID NODE::SENSOR
+extern const Node MY_ID = Node::SENSOR;
 
 enum class SensorState {
     IDLE,
