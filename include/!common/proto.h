@@ -71,7 +71,7 @@ typedef struct __attribute__((packed)) {
 
 // TODO: recalculate
 #define MSG_TIME      300
-#define EPOCH_TIME    MSG_TIME * NUM_NODES
+#define EPOCH_TIME    (MSG_TIME * NUM_NODES)
 
 void send(Packet* packet);
 
