@@ -44,8 +44,8 @@ void loop() {
 
             // check for forwarding-loop (so if we've already forwarded this packet)
             bool haveIAlreadyForwardedThisPacket = false;
-            for (auto hop : txPacket.hops) {
-                if (hop == MY_ID) {
+            for (size_t idx = 0; idx < txPacket.numHops; ++idx) {
+                if (txPacket.hops[idx] == MY_ID) {
                     haveIAlreadyForwardedThisPacket = true;
                     break;
                 }

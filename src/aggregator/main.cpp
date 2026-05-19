@@ -53,12 +53,12 @@ void loop() {
             if (rxPacket.type == PacketType::COLOR_MEAS) {
                 DEBUG("Got color measurement: "); DEBUG("("); DEBUG(rxPacket.data.colorMeasurement.red); DEBUG(", "); DEBUG(rxPacket.data.colorMeasurement.green); DEBUG(", "); DEBUG(rxPacket.data.colorMeasurement.blue); DEBUGLN(")");
 
-                // TODO: check number of hops instead of all
+                // TODO: also mark rxPacket.src as alive
                 DEBUG("\tvia: ");
-                for (auto node : rxPacket.hops) {
+                for (size_t idx = 0; idx < rxPacket.numHops; ++idx) {
+                    Node node = rxPacket.hops[idx];
                     DEBUG(node); DEBUG(" ");
                     isNodeAlive[node] = true;   // set alive for report
-
                 }
                 DEBUGLN("");
             } else {
