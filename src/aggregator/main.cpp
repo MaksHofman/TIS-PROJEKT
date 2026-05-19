@@ -61,6 +61,7 @@ void loop() {
                     isNodeAlive[node] = true;   // set alive for report
                 }
                 DEBUGLN("");
+                currentState = AggregatorState::IDLE;
             } else {
                 DEBUG("Unknown packet type: "); DEBUGLN(rxPacket.type);
                 currentState = AggregatorState::IDLE;
