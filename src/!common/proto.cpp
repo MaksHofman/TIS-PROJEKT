@@ -16,7 +16,8 @@ void send(Packet *packet) {
     // now wait for our time slot
     // for aggregator this will always be false, thus it will never wait
     while (millis() < nextTimeSlot) {
-        ;
+        // was no-op before, but now let's at least call blink
+        blink();
     }
 
     add_blinks(BLINKS_SEND);
