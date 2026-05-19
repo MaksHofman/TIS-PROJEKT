@@ -43,7 +43,7 @@ unsigned long getOffsetToOurSlot(Node receivedSourceId) {
 }
 
 void validatePacket(Packet *packet) {
-
+    // TODO: implement
 }
 
 size_t receive(Packet *packet) {
