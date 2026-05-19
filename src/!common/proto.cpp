@@ -58,11 +58,13 @@ size_t receive(Packet *packet) {
             nextTimeSlot = millis() + getOffsetToOurSlot(packet->src);
             isSynced = true;
         }
+
+        return packetSize;
     } else {
         Serial.print("WARN: Unexpected packet size: "); Serial.println(packetSize);
-    }
 
-    return packetSize;
+        return 0;       // somewhat signalize error
+    }
 }
 
 void setupLoRa() {
