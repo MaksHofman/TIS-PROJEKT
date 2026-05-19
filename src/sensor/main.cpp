@@ -50,6 +50,9 @@ void loop() {
         case SensorState::PROCESS_PACKET: {
             if (rxPacket.type == PacketType::TRACE_REQ) {
                 currentState = SensorState::RESPOND_TIME_TRACE;
+            } else {
+                DEBUG("Unknown packet type: "); DEBUGLN(rxPacket.type);
+                currentState = SensorState::IDLE;
             }
             break;
         }
@@ -67,6 +70,8 @@ void loop() {
                 }
             };
             send(&packet);
+
+            currentState = SensorState::IDLE;
             break;
         }
         case SensorState::RESPOND_TIME_TRACE: {
@@ -81,6 +86,8 @@ void loop() {
                 }
             };
             send(&packet);
+
+            currentState = SensorState::IDLE;
             break;
         }
     }

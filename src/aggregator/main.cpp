@@ -61,11 +61,16 @@ void loop() {
 
                 }
                 DEBUGLN("");
+            } else {
+                DEBUG("Unknown packet type: "); DEBUGLN(rxPacket.type);
+                currentState = AggregatorState::IDLE;
             }
             break;
         }
         case AggregatorState::SEND_TIME_TRACE: {
             // TODO: implement, we won't get here yet
+
+            currentState = AggregatorState::IDLE;
             break;
         }
         case AggregatorState::SHOW_REPORT: {
@@ -79,6 +84,8 @@ void loop() {
                 // set is dead for next report
                 isNodeAlive[i] = false;
             }
+
+            currentState = AggregatorState::IDLE;
             break;
         }
     }
