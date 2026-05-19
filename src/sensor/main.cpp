@@ -34,7 +34,7 @@ void loop() {
     // Mruganko
     blink();
 
-    Packet rxPacket;
+    static Packet rxPacket = { };
     switch (currentState) {
         case SensorState::IDLE: {
             // network is most important, so handle it first
@@ -68,7 +68,8 @@ void loop() {
                         .green = readColor(COLOR_GREEN),
                         .blue = readColor(COLOR_BLUE),
                     }
-                }
+                },
+                .numHops = 0
             };
             // only return to IDLE on successful send
             if (send(&packet)) {
@@ -85,7 +86,8 @@ void loop() {
                     .traceResponse = DataTraceResponse {
                         .timestamp = static_cast<uint16_t>(millis())
                     }
-                }
+                },
+                .numHops = 0
             };
             // only return to IDLE on successful
             if (send(&packet)) {

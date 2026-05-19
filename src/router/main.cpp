@@ -26,8 +26,8 @@ void setup() {
 void loop() {
     blink();
 
-    Packet rxPacket;
-    Packet txPacket;
+    static Packet rxPacket = { };
+    static Packet txPacket = { };
     switch (currentState) {
         case RouterState::IDLE: {
             if (receive(&rxPacket)) {

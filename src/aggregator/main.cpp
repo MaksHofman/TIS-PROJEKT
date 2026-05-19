@@ -32,7 +32,7 @@ void setup() {
 void loop() {
     blink();
 
-    Packet rxPacket;
+    static Packet rxPacket = { };
     switch (currentState) {
         case AggregatorState::IDLE: {
             if (receive(&rxPacket)) {
