@@ -64,6 +64,7 @@ typedef struct __attribute__((packed)) {
     } data;
 
     // TODO: storing this in a different way should allow for using 2 bytes less per Packet
+    uint8_t numHops;
     Node hops[MAX_HOPS];
 } Packet;
 
