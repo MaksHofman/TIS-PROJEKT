@@ -55,6 +55,13 @@ void loop() {
                 break;
             }
 
+            // check if we're at max hops
+            if (txPacket.numHops == MAX_HOPS) {
+                DEBUGLN("WARN: Max hops reached, dropping packet");
+                currentState = RouterState::IDLE;
+                break;
+            }
+
             // update hops
             // TODO: check if this line works
             txPacket.hops[txPacket.numHops++] = MY_ID;
