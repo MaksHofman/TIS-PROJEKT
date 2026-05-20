@@ -21,7 +21,7 @@
 #define S1 3
 #define S2 4
 #define S3 5
-#define OUT_PIN 6
+#define OUT_PIN 7
 
 // Częstotliwość nadawania przez sensor
 #define READ_TIMEOUT 2000
