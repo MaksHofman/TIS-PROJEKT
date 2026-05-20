@@ -1,5 +1,11 @@
-.pio
 **/.DS_Store
-compile_commands.json
 .cache
+
+
+# devenv
+.devenv
+
+# platformio
+.pio
 .platformio
+compile_commands.json
