@@ -3,6 +3,7 @@
 #include <LoRa.h>
 #include "!common/led_helper.h"
 #include "!common/config.h"
+#include "variant.h"
 
 bool isSynced = false;
 unsigned long nextTimeSlot = 0;
@@ -19,7 +20,7 @@ bool send(Packet *packet) {
     // actually send packet
     LoRa.beginPacket();
     LoRa.write((const uint8_t*) packet, PACKET_SIZE);
-    LoRa.endPacket();
+    LoRa.endPacket(true);
 
     // update next time slot
     nextTimeSlot += EPOCH_TIME;
