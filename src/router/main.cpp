@@ -6,12 +6,16 @@
 // change per flashed node
 extern const Node MY_ID = Node::W1;
 
+#define ALIVE_TIMEOUT 5000
+
 enum class RouterState {
     IDLE,
     PROCESS_PACKET,
-    FORWARD_PACKET
+    FORWARD_PACKET,
+    SCREAM_ALIVE
 };
 RouterState currentState = RouterState::IDLE;
+unsigned long lastAliveSent = 0;
 
 void setup() {
     BEGIN_DEBUG;
@@ -33,6 +37,9 @@ void loop() {
             if (receive(&rxPacket)) {
                 // got any packet
                 currentState = RouterState::PROCESS_PACKET;
+            } else if (millis() - lastAliveSent > ALIVE_TIMEOUT) {
+                currentState = RouterState::SCREAM_ALIVE;
+                lastAliveSent = millis();
             }
             break;
         }
@@ -73,6 +80,21 @@ void loop() {
             // packet is already prepared by PROCESS_PACKET
             // try send and only return to IDLE on successful send
             if (send(&txPacket)) {
+                DEBUG("Forwarded packet of type "); DEBUG(txPacket.type); DEBUG(" to "); DEBUGLN(txPacket.dst);
+                currentState = RouterState::IDLE;
+            }
+            break;
+        }
+        case RouterState::SCREAM_ALIVE: {
+            Packet packet {
+                .src = MY_ID,
+                .dst = Node::AGGREGATOR,
+                .type = PacketType::IM_ALIVE,
+                .data = { },
+                .numHops = MAX_HOPS    // set to max to prevent being forwarded
+            };
+            if (send(&packet)) {
+                DEBUGLN("Screamed alive!");
                 currentState = RouterState::IDLE;
             }
             break;
