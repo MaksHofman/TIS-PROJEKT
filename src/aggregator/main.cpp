@@ -84,7 +84,7 @@ void loop() {
         }
         case AggregatorState::SHOW_REPORT: {
             // TODO: pretty print
-            DEBUG("Report: ");
+            DEBUGLN("Report: ");
             for (int i = 0; i < NUM_NODES; i++) {
                 DEBUG(i); DEBUG(": ");
                 DEBUG(isNodeAlive[i] ? "alive" : "dead");
