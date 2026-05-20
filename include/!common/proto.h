@@ -41,7 +41,14 @@ enum PacketType : uint8_t {
      * Containes the same timestamp as the received TRACE_REQ.
      * Should be copied from received Packet to the sent one.
      */
-    TRACE_RES
+    TRACE_RES,
+
+    /**
+     * Sent while no other messages are present to mark node as active.
+     *
+     * Containes no data.
+     */
+    IM_ALIVE,
 };
 
 typedef struct __attribute__((packed)) {

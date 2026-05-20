@@ -71,6 +71,7 @@ size_t receive(Packet *packet) {
     }
 }
 
+extern unsigned long nextTimeSlot;
 void setupLoRa() {
     LoRa.begin(LORA_FREQ);
     LoRa.setSpreadingFactor(SPREADING_FACTOR);
@@ -81,4 +82,8 @@ void setupLoRa() {
     LoRa.enableInvertIQ();
 
     LoRa.receive();
+
+    pinMode(A1, INPUT);
+    randomSeed(analogRead(A1));
+    nextTimeSlot = random(EPOCH_TIME);
 }
