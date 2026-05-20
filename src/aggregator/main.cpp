@@ -5,7 +5,7 @@
 extern const Node MY_ID = Node::AGGREGATOR;
 
 #define TIME_TRACE_TIMEOUT 10000
-#define REPORT_TIMEOUT     2000
+#define REPORT_TIMEOUT     10000
 
 enum class AggregatorState {
     IDLE,
