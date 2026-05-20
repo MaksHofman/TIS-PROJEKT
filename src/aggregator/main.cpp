@@ -62,6 +62,11 @@ void loop() {
                 }
                 DEBUGLN("");
                 currentState = AggregatorState::IDLE;
+            } else if (rxPacket.type == PacketType::TRACE_RES) {
+                DEBUGLN("Got propagation time trace: ")
+                unsigned long roundTrip = static_cast<uint16_t>(millis()) - rxPacket.data.timeTrace.timestamp;
+                DEBUG("\tround-trip: "); DEBUG(roundTrip); DEBUGLN("ms");
+                currentState = AggregatorState::IDLE;
             } else {
                 DEBUG("Unknown packet type: "); DEBUGLN(rxPacket.type);
                 currentState = AggregatorState::IDLE;
@@ -73,7 +78,11 @@ void loop() {
                 .src = MY_ID,
                 .dst = Node::SENSOR,
                 .type = PacketType::TRACE_REQ,
-                .data = { },
+                .data = {
+                    .timeTrace = {
+                        .timestamp = static_cast<uint16_t>(millis())
+                    }
+                },
                 .numHops = 0
             };
             // only return to IDLE on successful send
