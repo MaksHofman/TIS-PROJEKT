@@ -31,12 +31,15 @@ enum PacketType : uint8_t {
     /**
      * Propagation time measurement request.
      *
-     * Contains no data.
+     * Contains sent timestamp set by sender.
      */
     TRACE_REQ,
 
     /**
      * Propagation time measurement response.
+     *
+     * Containes the same timestamp as the received TRACE_REQ.
+     * Should be copied from received Packet to the sent one.
      */
     TRACE_RES
 };
@@ -49,7 +52,7 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     uint16_t timestamp;
-} DataTraceResponse;
+} DataTimeTrace;
 
 typedef struct __attribute__((packed)) {
     // from/to who
@@ -60,7 +63,7 @@ typedef struct __attribute__((packed)) {
     PacketType type : 2;
     union {
         DataColorMeasurement colorMeasurement;
-        DataTraceResponse traceResponse;
+        DataTimeTrace timeTrace;
     } data;
 
     // TODO: storing this in a different way should allow for using 2 bytes less per Packet

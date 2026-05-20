@@ -83,9 +83,7 @@ void loop() {
                 .dst = Node::AGGREGATOR,
                 .type = PacketType::TRACE_RES,
                 .data = {
-                    .traceResponse = DataTraceResponse {
-                        .timestamp = static_cast<uint16_t>(millis())
-                    }
+                    .timeTrace = rxPacket.data.timeTrace
                 },
                 .numHops = 0
             };

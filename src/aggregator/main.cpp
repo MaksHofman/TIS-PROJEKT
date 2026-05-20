@@ -38,7 +38,7 @@ void loop() {
             if (receive(&rxPacket)) {
                 // got any packet
                 currentState = AggregatorState::PROCESS_PACKET;
-            } else if (millis() - lastTraceSent > TIME_TRACE_TIMEOUT && false /* TODO: disable for now */) {
+            } else if (millis() - lastTraceSent > TIME_TRACE_TIMEOUT) {
                 // no packet and it's time for a time trace
                 currentState = AggregatorState::SEND_TIME_TRACE;
                 lastTraceSent = millis();
@@ -69,9 +69,17 @@ void loop() {
             break;
         }
         case AggregatorState::SEND_TIME_TRACE: {
-            // TODO: implement, we won't get here yet
-
-            currentState = AggregatorState::IDLE;
+            Packet packet {
+                .src = MY_ID,
+                .dst = Node::SENSOR,
+                .type = PacketType::TRACE_REQ,
+                .data = { },
+                .numHops = 0
+            };
+            // only return to IDLE on successful send
+            if (send(&packet)) {
+                currentState = AggregatorState::IDLE;
+            }
             break;
         }
         case AggregatorState::SHOW_REPORT: {
