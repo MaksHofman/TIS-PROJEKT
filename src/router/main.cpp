@@ -63,7 +63,6 @@ void loop() {
             }
 
             // update hops
-            // TODO: check if this line works
             txPacket.hops[txPacket.numHops++] = MY_ID;
 
             // finally packet is ready, send it
